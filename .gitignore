@@ -1,0 +1,4 @@
+.zig-cache
+zig-out
+source.txt
+todos.txt

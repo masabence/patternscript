@@ -1,0 +1,182 @@
+const std = @import("std");
+const Self = @This();
+const Token = @import("Token.zig");
+
+source: []const u8,
+start: usize,
+current: usize,
+line: u32,
+cache: ?Token,
+
+const keywords = std.StaticStringMap(Token.Kind).initComptime(.{
+    .{"any", .kw_any},
+    .{"digit", .kw_digit},
+    .{"wordchar", .kw_wordchar},
+    .{"whitespace", .kw_whitespace},
+    .{"boundary", .kw_boundary},
+    .{"not", .kw_not},
+    .{"of", .kw_of},
+    .{"from", .kw_from},
+    .{"except", .kw_except},
+    .{"chars", .kw_chars},
+    .{"range", .kw_range},
+    .{"either", .kw_either},
+    .{"or", .kw_or},
+    .{"capture", .kw_capture},
+    .{"optional", .kw_optional},
+    .{"start", .kw_start},
+    .{"end", .kw_end},
+    .{"let", .kw_let},
+});
+
+pub fn init(source: []const u8) Self {
+    return .{
+        .source = source,
+        .start = 0,
+        .current = 0,
+        .line = 1,
+        .cache = null,
+    };
+}
+
+pub fn next(self: *Self) ?Token {
+    if (self.cache) |cached| {
+        self.cache = null;
+        return cached;
+    }
+
+    return self.lexNext();
+}
+
+pub fn peek(self: *Self) ?Token {
+    if (self.cache) |cached| {
+        return cached;
+    }
+
+    self.cache = self.lexNext();
+    return self.cache;
+}
+
+
+fn lexNext(self: *Self) ?Token {
+
+    if (self.cache) |tok| {
+        self.cache = null;
+        return tok;
+    }
+
+
+    self.start = self.current;
+
+    while (self.advance()) |c| {
+
+        switch (c) {
+
+            '\n' => {
+                self.line += 1;
+                self.start += 1;
+                continue;
+            },
+
+            ' ', '\t', '\r' => {
+                self.start += 1;
+                continue;
+            },
+
+            '=' => return self.makeToken(.equal),
+            '+' => return self.makeToken(.plus),
+            '-' => return self.makeToken(.dash),
+            '{' => return self.makeToken(.lcurly),
+            '}' => return self.makeToken(.rcurly),
+
+            '0'...'9' => return self.makeNumberIdentifier(),
+            'a'...'z', 
+            'A'...'Z', '_' => return self.makeAlphanumericIdentifier(),
+
+            '"' => return self.makeStringLiteral('"', .string),
+            '<' => return self.makeStringLiteral('>', .name),
+            '/' => return self.makeStringLiteral('/', .pattern),
+            '[' => return self.makeStringLiteral(']', .pattern),
+            else => std.debug.panic("Unhandled token character: {c}", .{c}),
+        }
+
+    } else return null;
+}
+
+fn makeNumberIdentifier(self: *Self) Token {
+
+    while (self.advance()) |c| {
+        if (!std.ascii.isDigit(c)) {
+            self.current -= 1;
+            break;
+        }
+    }
+
+    return self.makeToken(.identifier);
+}
+
+fn makeAlphanumericIdentifier(self: *Self) Token {
+
+    while (self.advance()) |c| {
+        if (!std.ascii.isAlphanumeric(c) and c != '_') {
+            self.current -= 1;
+            break;
+        }
+    }
+
+    const word = self.source[self.start..self.current];
+
+    if (keywords.get(word)) |kw| {
+        return self.makeToken(kw);
+    }
+    
+    return self.makeToken(.identifier);
+}
+
+fn makeStringLiteral(self: *Self, comptime end: u8, kind: Token.Kind) Token {
+
+    const error_token = self.makeErrorToken("Unfinished literal, expected '" ++ &[1]u8{ end } ++ "'.");
+
+    while (self.advance()) |c| {
+
+        if (c == end) {
+            break;
+        }
+
+        if (c == '\n') {
+            return error_token;
+        }
+
+    } else {
+        return error_token; // reached eof
+    }
+
+    return self.makeToken(kind);
+
+}
+
+fn makeToken(self: *Self, kind: Token.Kind) Token {
+    return Token {
+        .kind = kind,
+        .lexeme = self.source[self.start..self.current],
+        .line = self.line,
+    };
+}
+
+fn makeErrorToken(self: Self, comptime msg: []const u8) Token {
+    return Token {
+        .kind = .illegal,
+        .lexeme = msg,
+        .line = self.line,
+    };
+}
+
+
+fn advance(self: *Self) ?u8 {
+    if (self.source.len <= self.current) {
+        return null;
+    }
+
+    self.current += 1;
+    return self.source[self.current-1];
+}
