@@ -305,11 +305,6 @@ fn parseEitherOr(self: *Self, token: Token) Error!Element {
             return Error.InvalidConstruct;
         };
 
-        if (first_content == .either_or) {
-            try self.reportError("Cannot have 'either' inside another 'either' element", token);
-            return Error.InvalidConstruct;
-        }
-
         try branches.append(self.alloc(), content);
     }
 
