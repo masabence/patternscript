@@ -1,8 +1,8 @@
 .{
     .name = .patternscript,
-    .version = "0.0.0",
-    .fingerprint = 0xec55fd0bc30dae53,
-    .minimum_zig_version = "0.15.1",
+    .version = "0.1.0",
+    .fingerprint = 0x39655dd5b3ee94bf,
+    .minimum_zig_version = "0.16.0-dev.2637+6a9510c0e",
     .dependencies = .{},
     .paths = .{
         "build.zig",

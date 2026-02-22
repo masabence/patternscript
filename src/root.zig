@@ -7,7 +7,7 @@ const Parser = @import("Parser.zig");
 const Element = @import("element.zig").Element;
 
 
-pub fn compile(source: []const u8, gpa: Allocator, writer: *std.Io.Writer) !void {
+pub fn compile(gpa: Allocator, source: []const u8, writer: *std.Io.Writer) !void {
 
     var scanner = Scanner.init(source);
     

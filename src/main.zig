@@ -1,25 +1,28 @@
 const std = @import("std");
 const patternscript = @import("patternscript");
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
 
-    var dba: std.heap.DebugAllocator(.{}) = .init;
-    defer _ = dba.deinit();
-    const gpa = dba.allocator();
+    const gpa = init.gpa;
+    const io = init.io;
+    const file = try std.Io.Dir.cwd().openFile(io, "source.txt", .{ .mode = .read_only });
+    defer file.close(io);
 
-    const file = try std.fs.cwd().openFile("source.txt", .{ .mode = .read_only });
-    defer file.close();
+    var file_buffer: [512]u8 = undefined;
+    var reader = file.reader(io, &file_buffer);
 
-    const source = try file.readToEndAlloc(gpa, std.math.maxInt(u32));
-    defer gpa.free(source);
+    var file_content: std.Io.Writer.Allocating = .init(gpa);
+    defer file_content.deinit();
+
+    _ = try reader.interface.streamRemaining(&file_content.writer);
 
 
-    var buffer: [1024]u8 = undefined;
-    var stdin = std.fs.File.stdout().writer(&buffer);
-    const writer = &stdin.interface;
+    var stdout_buffer: [64]u8 = undefined;
+    var stdout_writer = std.Io.File.stdout().writer(io, &stdout_buffer);
+    const stdout = &stdout_writer.interface;
 
-    try patternscript.compile(source, gpa, writer);
-    try writer.writeByte('\n');
+    try patternscript.compile(gpa, file_content.written(), stdout);
+    try stdout.writeByte('\n');
 
-    try writer.flush();
+    try stdout.flush();
 }
