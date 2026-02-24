@@ -330,6 +330,7 @@ fn match(self: Self, kind: Token.Kind) ?Token {
 fn reportError(self: *Self, msg: []const u8, token: Token) Allocator.Error!void {
     try self.errors.append(self.alloc(), .{
         .line = token.line,
+        .col = token.col,
         .message = msg,
     });
 }
