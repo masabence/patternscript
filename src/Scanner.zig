@@ -10,24 +10,24 @@ line: u32,
 cache: ?Token,
 
 const keywords = std.StaticStringMap(Token.Kind).initComptime(.{
-    .{"any", .kw_any},
-    .{"digit", .kw_digit},
-    .{"wordchar", .kw_wordchar},
-    .{"whitespace", .kw_whitespace},
-    .{"boundary", .kw_boundary},
-    .{"not", .kw_not},
-    .{"of", .kw_of},
-    .{"from", .kw_from},
-    .{"except", .kw_except},
-    .{"chars", .kw_chars},
-    .{"range", .kw_range},
-    .{"either", .kw_either},
-    .{"or", .kw_or},
-    .{"capture", .kw_capture},
-    .{"optional", .kw_optional},
-    .{"start", .kw_start},
-    .{"end", .kw_end},
-    .{"let", .kw_let},
+    .{ "any", .kw_any },
+    .{ "digit", .kw_digit },
+    .{ "wordchar", .kw_wordchar },
+    .{ "whitespace", .kw_whitespace },
+    .{ "boundary", .kw_boundary} ,
+    .{ "not", .kw_not },
+    .{ "of", .kw_of },
+    .{ "from", .kw_from },
+    .{ "except", .kw_except },
+    .{ "chars", .kw_chars },
+    .{ "range", .kw_range },
+    .{ "either", .kw_either },
+    .{ "or", .kw_or },
+    .{ "capture", .kw_capture },
+    .{ "optional", .kw_optional },
+    .{ "start", .kw_start },
+    .{ "end", .kw_end },
+    .{ "let", .kw_let },
 });
 
 pub fn init(source: []const u8) Self {
@@ -47,7 +47,7 @@ pub fn next(self: *Self) ?Token {
         return cached;
     }
 
-    return self.lexNext();
+    return self.scanNext();
 }
 
 pub fn peek(self: *Self) ?Token {
@@ -55,34 +55,20 @@ pub fn peek(self: *Self) ?Token {
         return cached;
     }
 
-    self.cache = self.lexNext();
+    self.cache = self.scanNext();
     return self.cache;
 }
 
 
-fn lexNext(self: *Self) ?Token {
-
-    if (self.cache) |tok| {
-        self.cache = null;
-        return tok;
-    }
-
-
+fn scanNext(self: *Self) ?Token {
     self.start = self.current;
 
     while (self.advance()) |c| {
 
         switch (c) {
 
-            '\n' => {
-                self.line += 1;
+            '\n', '\r', '\t', ' ' => {
                 self.start += 1;
-                continue;
-            },
-
-            ' ', '\t', '\r' => {
-                self.start += 1;
-                continue;
             },
 
             '=' => return self.makeToken(.equal),
@@ -106,7 +92,6 @@ fn lexNext(self: *Self) ?Token {
 }
 
 fn makeNumberIdentifier(self: *Self) Token {
-
     while (self.advance()) |c| {
         if (!std.ascii.isDigit(c)) {
             self.current -= 1;
@@ -118,7 +103,6 @@ fn makeNumberIdentifier(self: *Self) Token {
 }
 
 fn makeAlphanumericIdentifier(self: *Self) Token {
-
     while (self.advance()) |c| {
         if (!std.ascii.isAlphanumeric(c) and c != '_') {
             self.current -= 1;
@@ -137,6 +121,7 @@ fn makeAlphanumericIdentifier(self: *Self) Token {
 
 fn makeStringLiteral(self: *Self, comptime end: u8, kind: Token.Kind) Token {
 
+    // This is done here to have the error point at the beginning
     const error_token = self.makeErrorToken("Unfinished literal, expected '" ++ .{ end } ++ "'.");
 
     while (self.advance()) |c| {
@@ -154,7 +139,6 @@ fn makeStringLiteral(self: *Self, comptime end: u8, kind: Token.Kind) Token {
     }
 
     return self.makeToken(kind);
-
 }
 
 fn makeToken(self: *Self, kind: Token.Kind) Token {
@@ -181,8 +165,9 @@ fn advance(self: *Self) ?u8 {
         return null;
     }
 
-    if (self.source.len > self.current and self.source[self.current] == '\n') {
+    if (self.source[self.current] == '\n') {
         self.line_start = @intCast(self.current+1);
+        self.line += 1;
     }
 
     self.current += 1;
