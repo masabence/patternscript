@@ -5,6 +5,7 @@ const Token = @import("Token.zig");
 source: []const u8,
 start: usize,
 current: usize,
+line_start: u32,
 line: u32,
 cache: ?Token,
 
@@ -35,6 +36,7 @@ pub fn init(source: []const u8) Self {
         .start = 0,
         .current = 0,
         .line = 1,
+        .line_start = 0,
         .cache = null,
     };
 }
@@ -135,7 +137,7 @@ fn makeAlphanumericIdentifier(self: *Self) Token {
 
 fn makeStringLiteral(self: *Self, comptime end: u8, kind: Token.Kind) Token {
 
-    const error_token = self.makeErrorToken("Unfinished literal, expected '" ++ &[1]u8{ end } ++ "'.");
+    const error_token = self.makeErrorToken("Unfinished literal, expected '" ++ .{ end } ++ "'.");
 
     while (self.advance()) |c| {
 
@@ -160,6 +162,7 @@ fn makeToken(self: *Self, kind: Token.Kind) Token {
         .kind = kind,
         .lexeme = self.source[self.start..self.current],
         .line = self.line,
+        .col = @as(u32, @intCast(self.start + 1)) - self.line_start,
     };
 }
 
@@ -168,6 +171,7 @@ fn makeErrorToken(self: Self, comptime msg: []const u8) Token {
         .kind = .illegal,
         .lexeme = msg,
         .line = self.line,
+        .col = undefined,
     };
 }
 
@@ -175,6 +179,10 @@ fn makeErrorToken(self: Self, comptime msg: []const u8) Token {
 fn advance(self: *Self) ?u8 {
     if (self.source.len <= self.current) {
         return null;
+    }
+
+    if (self.source.len > self.current and self.source[self.current] == '\n') {
+        self.line_start = @intCast(self.current+1);
     }
 
     self.current += 1;

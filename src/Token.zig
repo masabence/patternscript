@@ -3,6 +3,7 @@ const Self = @This();
 kind: Kind,
 lexeme: []const u8,
 line: u32,
+col: u32,
 
 pub const Kind = enum {
     string, pattern, identifier, name,
