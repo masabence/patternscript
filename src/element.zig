@@ -1,6 +1,9 @@
 const std = @import("std");
 const Writer = std.Io.Writer;
 
+const Position = @import("Position.zig");
+const Token = @import("Token.zig");
+
 pub const Not = @import("elements/Not.zig");
 pub const String = @import("elements/String.zig");
 pub const Pattern = @import("elements/Pattern.zig");
@@ -12,8 +15,57 @@ pub const Capture = @import("elements/Capture.zig");
 pub const EitherOr = @import("elements/EitherOr.zig");
 pub const Charset = @import("elements/Charset.zig");
 
+const Element = @This();
 
-pub const Element = union(enum) {
+value: Value,
+start: Position,
+end: Position,
+
+// pub fn initAtom(str: []const u8) Value {
+//     return .{ .atom = str };
+// }
+
+// pub fn initNot(content: *const Element) Value {
+//     return .{ .not = Not { .content = content} };
+// }
+
+// pub fn initString(str: []const u8) Value {
+//     return .{ .string = String { .str = str} };
+// }
+
+// pub fn initPattern(str: []const u8) Value {
+//     return .{ .pattern = Pattern { .str = str} };
+// }
+
+// pub fn initBlock(contents: []const Element) Value {
+//     return .{ .block = Block { .contents = contents} };
+// }
+
+// pub fn initNOf(n: []const u8, content: *const Element, plus: bool) Value {
+//     return .{ .n_of = NOf { .n = n, .content = content, .plus = plus } };
+// }
+
+// pub fn initNToMOf(n: []const u8, m: []const u8, content: *const Element) Value {
+//     return .{ .n_to_m_of = NToMOf { .n = n, .m = m, .content = content } };
+// }
+
+// pub fn initOptional(content: *const Element) Value {
+//     return .{ .optional = Optional { .content = content} };
+// }
+
+// pub fn initCapture(content: *const Element) Value {
+//     return .{ .capture = Capture { .content = content } };
+// }
+
+// pub fn initEitherOr(contents: []const Element) Value {
+//     return .{ .either_or = EitherOr { .contents = contents } };
+// }
+
+// pub fn initCharset(content: *const Element, negated: bool) Value {
+//     return .{ .charset = Charset { .content = content, .negated = negated } };
+// }
+
+pub const Value = union(enum) {
     atom: []const u8,
     not: Not,
     string: String,
@@ -27,7 +79,7 @@ pub const Element = union(enum) {
     charset: Charset,
 
 
-    pub fn compile(self: Element, writer: *Writer, strict: bool) Writer.Error!void {
+    pub fn compile(self: Value, writer: *Writer, strict: bool) Writer.Error!void {
         switch (self) {
             .atom => |str| try writer.writeAll(str),
             .not => |not| try not.compile(writer),
@@ -42,49 +94,5 @@ pub const Element = union(enum) {
             .charset => |charset| try charset.compile(writer),
             // else => std.debug.panic("Unimplemented element: {any}", .{@tagName(self)}),
         }
-    }
-
-    pub fn initAtom(str: []const u8) Element {
-        return .{ .atom = str };
-    }
-
-    pub fn initNot(content: *Element) Element {
-        return .{ .not = Not { .content = content} };
-    }
-
-    pub fn initString(str: []const u8) Element {
-        return .{ .string = String { .str = str} };
-    }
-
-    pub fn initPattern(str: []const u8) Element {
-        return .{ .pattern = Pattern { .str = str} };
-    }
-
-    pub fn initBlock(contents: []Element) Element {
-        return .{ .block = Block { .contents = contents} };
-    }
-
-    pub fn initNOf(n: []const u8, content: *Element, plus: bool) Element {
-        return .{ .n_of = NOf { .n = n, .content = content, .plus = plus } };
-    }
-
-    pub fn initNToMOf(n: []const u8, m: []const u8, content: *Element) Element {
-        return .{ .n_to_m_of = NToMOf { .n = n, .m = m, .content = content } };
-    }
-
-    pub fn initOptional(content: *Element) Element {
-        return .{ .optional = Optional { .content = content} };
-    }
-
-    pub fn initCapture(content: *Element) Element {
-        return .{ .capture = Capture { .content = content } };
-    }
-
-    pub fn initEitherOr(contents: []Element) Element {
-        return .{ .either_or = EitherOr { .contents = contents } };
-    }
-
-    pub fn initCharset(content: *Element, negated: bool) Element {
-        return .{ .charset = Charset { .content = content, .negated = negated } };
     }
 };

@@ -1,13 +1,13 @@
 const Self = @This();
+const Position = @import("Position.zig");
 
 kind: Kind,
 lexeme: []const u8,
-line: u32,
-col: u32,
+position: Position,
 
 pub const Kind = enum {
     string, pattern, identifier, name,
-    equal, plus, dash, lcurly, rcurly,
+    equal, plus, dash, comma, lcurly, rcurly,
     kw_any, kw_digit, kw_wordchar, kw_whitespace, kw_boundary, kw_not,
     kw_of, kw_from, kw_except, kw_chars, kw_range,
     kw_either, kw_or,
@@ -18,7 +18,7 @@ pub const Kind = enum {
     illegal,
 };
 
-pub fn len(self: Self) u8 {
+pub fn len(self: Self) usize {
     return self.lexeme.len;
 }
 

@@ -1,6 +1,6 @@
 const std = @import("std");
 const Writer = std.Io.Writer;
-const Element = @import("../element.zig").Element;
+const Element = @import("../element.zig");
 
 const Self = @This();
 
@@ -10,7 +10,7 @@ contents: []Element,
 pub fn compile(self: Self, writer: *Writer, strict: bool) Writer.Error!void {
 
     if (self.contents.len == 1) {
-        return self.contents[0].compile(writer, strict);
+        return self.contents[0].value.compile(writer, strict);
     }
 
     if (strict) {
@@ -18,7 +18,7 @@ pub fn compile(self: Self, writer: *Writer, strict: bool) Writer.Error!void {
     }
 
     for (self.contents) |content| {
-        try content.compile(writer, false);
+        try content.value.compile(writer, false);
     }
 
     if (strict) {

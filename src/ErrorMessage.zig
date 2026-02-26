@@ -1,10 +1,11 @@
 const std = @import("std");
 const Self = @This();
 
-line: u32,
-col: u32,
+const Position = @import("Position.zig");
+
+position: Position,
 message: []const u8,
 
 pub fn debug(self: Self) void {
-    std.debug.print("[{}, {}] Error: {s}\n", .{self.line, self.col, self.message});
+    std.debug.print("[{}, {}] Error: {s}\n", .{self.position.line, self.position.col, self.message});
 }

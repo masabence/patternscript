@@ -1,6 +1,6 @@
 const std = @import("std");
 const Writer = std.Io.Writer;
-const Element = @import("../element.zig").Element;
+const Element = @import("../element.zig");
 
 const Self = @This();
 
@@ -13,7 +13,7 @@ pub fn compile(self: Self, writer: *Writer) Writer.Error!void {
 
     var buffer = [buf_size]u8 {0, 0};
     var buffer_writer = std.Io.Writer.fixed(&buffer);
-    self.content.compile(&buffer_writer, false) catch {
+    self.content.value.compile(&buffer_writer, false) catch {
         std.debug.panic("Atom overfilled {} byte buffer", .{buf_size});
     };
 

@@ -8,6 +8,7 @@ current: usize,
 line_start: u32,
 line: u32,
 cache: ?Token,
+consumed: ?Token,
 
 const keywords = std.StaticStringMap(Token.Kind).initComptime(.{
     .{ "any", .kw_any },
@@ -38,6 +39,7 @@ pub fn init(source: []const u8) Self {
         .line = 1,
         .line_start = 0,
         .cache = null,
+        .consumed = null,
     };
 }
 
@@ -47,7 +49,9 @@ pub fn next(self: *Self) ?Token {
         return cached;
     }
 
-    return self.scanNext();
+    const result = self.scanNext();
+    self.consumed = result;
+    return result;
 }
 
 pub fn peek(self: *Self) ?Token {
@@ -74,6 +78,7 @@ fn scanNext(self: *Self) ?Token {
             '=' => return self.makeToken(.equal),
             '+' => return self.makeToken(.plus),
             '-' => return self.makeToken(.dash),
+            ',' => return self.makeToken(.comma),
             '{' => return self.makeToken(.lcurly),
             '}' => return self.makeToken(.rcurly),
 
@@ -142,20 +147,20 @@ fn makeStringLiteral(self: *Self, comptime end: u8, kind: Token.Kind) Token {
 }
 
 fn makeToken(self: *Self, kind: Token.Kind) Token {
+    const col = @as(u32, @intCast(self.start + 1)) - self.line_start;
     return Token {
         .kind = kind,
         .lexeme = self.source[self.start..self.current],
-        .line = self.line,
-        .col = @as(u32, @intCast(self.start + 1)) - self.line_start,
+        .position = .{ .line = self.line, .col = col, },
     };
 }
 
 fn makeErrorToken(self: Self, comptime msg: []const u8) Token {
+    const col = @as(u32, @intCast(self.start + 1)) - self.line_start;
     return Token {
         .kind = .illegal,
         .lexeme = msg,
-        .line = self.line,
-        .col = undefined,
+        .position = .{ .line = self.line, .col = col, }
     };
 }
 
