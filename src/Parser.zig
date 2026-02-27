@@ -62,6 +62,9 @@ fn parseElement(self: *Self) Error!?Element {
         .string => self.parseString(.string),
         .pattern => self.parseString(.pattern),
 
+        .lcurly => try self.parseBlock(),
+        .kw_capture => try self.parseCapture(),
+
         else => return null,
     };
 }
@@ -80,6 +83,27 @@ fn parseList(self: *Self) Error![]Element {
     }
 
     return try elements.toOwnedSlice(self.alloc());
+}
+
+fn parseBlock(self: *Self) Error!Element {
+    const opening = self.getCheckedToken();
+    const contents = try self.parseList();
+
+    const closing = self.match(.rcurly) orelse {
+        try self.reportError(
+            try self.format("Unclosed curly brace (opened on {}:{})", .{opening.position.line, opening.position.col}), 
+            self.scanner.consumed.?,
+            .start,
+        );
+        return Error.InvalidConstruct;
+    };
+
+    return Element {
+        .value = .{ .block = .{ .contents = contents } },
+        .start = opening.position,
+        .end = closing.position,
+    };
+
 }
 
 fn parseAtom(self: *Self, str: []const u8) Element {
@@ -101,6 +125,21 @@ fn parseString(self: *Self, comptime tag: std.meta.Tag(Element.Value)) Element {
     };
 }
 
+fn parseCapture(self: *Self) Error!Element {
+    const head = self.getCheckedToken();
+    const name = if (self.match(.name)) |token| token.stringValue() else null;
+    const content = try self.parseElement() orelse {
+        try self.reportError("Expected body for 'capture'", self.scanner.consumed.?, .end);
+        return Error.MissingToken;
+    };
+
+    return Element {
+        .value = .{ .capture = .{ .content = try self.dupe(content), .name = name } },
+        .start = head.position,
+        .end = content.end,
+    };
+    
+}
 
 fn consume(self: *Self, kind: Token.Kind, msg: []const u8) Allocator.Error!void {
     if (self.match(kind)) |_| {
@@ -154,6 +193,10 @@ fn isNumber(str: []const u8) bool {
 
 fn getCheckedToken(self: *Self) Token {
     return self.scanner.next() orelse unreachable;
+}
+
+fn format(self: *Self, comptime fmt: []const u8, args: anytype) Allocator.Error![]const u8 {
+    return std.fmt.allocPrint(self.alloc(), fmt, args);
 }
 
 fn dupe(self: *Self, e: Element) Allocator.Error!*const Element {
