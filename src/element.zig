@@ -53,9 +53,9 @@ end: Position,
 //     return .{ .optional = Optional { .content = content} };
 // }
 
-// pub fn initCapture(content: *const Element) Value {
-//     return .{ .capture = Capture { .content = content } };
-// }
+pub fn initCapture(content: *const Element) Value {
+    return .{ .capture = Capture { .content = content } };
+}
 
 // pub fn initEitherOr(contents: []const Element) Value {
 //     return .{ .either_or = EitherOr { .contents = contents } };

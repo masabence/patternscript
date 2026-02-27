@@ -29,7 +29,7 @@ pub fn deinit(self: *Self) void {
 }
 
 /// Result owned by the parser, freed with `deinit`
-pub fn parse(self: *Self) Allocator.Error![]Element {
+pub fn parse(self: *Self) Error![]Element {
 
     var elements: std.ArrayList(Element) = .empty;
 
@@ -41,7 +41,7 @@ pub fn parse(self: *Self) Allocator.Error![]Element {
     return elements.toOwnedSlice(self.alloc());
 }
 
-fn parseElement(self: *Self) Allocator.Error!?Element {
+fn parseElement(self: *Self) Error!?Element {
     const t = self.scanner.peek() orelse return null;
 
     const value = switch (t.kind) {
@@ -54,6 +54,8 @@ fn parseElement(self: *Self) Allocator.Error!?Element {
 
         .string => return self.parseString(.string),
         .pattern => return self.parseString(.pattern),
+
+        .kw_capture => return try self.parseSimpleParent(Element.initCapture, null),
 
         else => unreachable,
     };
@@ -105,7 +107,7 @@ fn parseSimpleParent(
         return error.InvalidConstruct;
     }
 
-    const value = factory(self.dupe(content));
+    const value = factory(try self.dupe(content));
 
     return Element {
         .value = value,
