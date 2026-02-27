@@ -55,8 +55,6 @@ fn parseElement(self: *Self) Error!?Element {
         .string => return self.parseString(.string),
         .pattern => return self.parseString(.pattern),
 
-        .kw_capture => return try self.parseSimpleParent(Element.initCapture, null),
-
         else => unreachable,
     };
 
@@ -85,45 +83,17 @@ fn parseString(self: *Self, comptime tag: std.meta.Tag(Element.Value)) Element {
 }
 
 
-fn parseSimpleParent(
-    self: *Self, 
-    comptime factory: fn(content: *const Element) Element.Value, 
-    comptime allowed_contents: ?[]const Token.Kind
-) Error!Element {
-    const head = self.scanner.next() orelse unreachable;
-
-    const content = try self.parseElement() orelse return error.MissingToken;
-
-    const allowed = allowed_contents == null or allowed: {
-        for (allowed_contents) |option| {
-            if (content.value == option) {
-                break :allowed true;
-            }
-        }
-        break :allowed false;
-    };
-
-    if (!allowed) {
-        return error.InvalidConstruct;
-    }
-
-    const value = factory(try self.dupe(content));
-
-    return Element {
-        .value = value,
-        .start = head.position,
-        .end = content.end,
-    };
-
-}
-
-
 fn consume(self: *Self, kind: Token.Kind, msg: []const u8) Allocator.Error!void {
     if (self.match(kind)) |_| {
         return;
     }
 
-    try self.reportError(msg, .{ .line = 0, .col = 0 });
+    if (self.scanner.peek()) |incorrect_token| {
+        try self.reportErrorByToken(msg, incorrect_token, .start);
+    }
+    else {
+        try self.reportErrorByToken(msg, self.scanner.consumed.?, .end);
+    }
 
 }
 
@@ -138,8 +108,8 @@ fn match(self: Self, kind: Token.Kind) ?Token {
     return null;
 }
 
-fn reportErrorByToken(self: *Self, msg: []const u8, token: Token, after_token: bool) Allocator.Error!void {
-    const offset = if (after_token) @as(u32, @intCast(token.len())) - 1 else 0;
+fn reportErrorByToken(self: *Self, msg: []const u8, token: Token, target: enum{start, end}) Allocator.Error!void {
+    const offset = if (target == .end) @as(u32, @intCast(token.len())) - 1 else 0;
     try self.errors.append(self.alloc(), .{
         .position = token.position.addToCol(offset),
         .message = msg,

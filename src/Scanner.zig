@@ -46,6 +46,7 @@ pub fn init(source: []const u8) Self {
 pub fn next(self: *Self) ?Token {
     if (self.cache) |cached| {
         self.cache = null;
+        self.consumed = cached;
         return cached;
     }
 
