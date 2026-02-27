@@ -30,37 +30,56 @@ pub fn deinit(self: *Self) void {
 
 /// Result owned by the parser, freed with `deinit`
 pub fn parse(self: *Self) Error![]Element {
+    const elements = try self.parseList();
 
-    var elements: std.ArrayList(Element) = .empty;
-
-    while (try self.parseElement()) |element| {
-        try elements.append(self.alloc(), element);
-        try self.consume(.comma, "Expected comma after element");
+    if (self.scanner.peek() != null) {
+        try self.reportError("Expected comma after element", self.scanner.consumed.?, .end);
+        return Error.InvalidConstruct;
     }
 
-    return elements.toOwnedSlice(self.alloc());
+    return elements;
+
 }
 
+/// Main dispatch for the parser.
+/// 
+/// Returns:
+/// * `Element` on success.
+/// * `null` after the stream ended.
+/// * `error.MissingToken` when a token was needed, but not found.
+/// * `error.InvalidConstruct`when a wrong token was found.
 fn parseElement(self: *Self) Error!?Element {
     const t = self.scanner.peek() orelse return null;
 
-    const value = switch (t.kind) {
-        .kw_digit => return self.parseAtom("\\d"),
-        .kw_wordchar => return self.parseAtom("\\w"),
-        .kw_whitespace => return self.parseAtom("\\s"),
-        .kw_boundary => return self.parseAtom("\\b"),
-        .kw_start => return self.parseAtom("^"),
-        .kw_end => return self.parseAtom("$"),
+    return switch (t.kind) {
+        .kw_digit => self.parseAtom("\\d"),
+        .kw_wordchar => self.parseAtom("\\w"),
+        .kw_whitespace => self.parseAtom("\\s"),
+        .kw_boundary => self.parseAtom("\\b"),
+        .kw_start => self.parseAtom("^"),
+        .kw_end => self.parseAtom("$"),
 
-        .string => return self.parseString(.string),
-        .pattern => return self.parseString(.pattern),
+        .string => self.parseString(.string),
+        .pattern => self.parseString(.pattern),
 
-        else => unreachable,
+        else => return null,
     };
+}
 
-    return Element {
-        .value = value,
-    };
+fn parseList(self: *Self) Error![]Element {
+    var elements: std.ArrayList(Element) = .empty;
+
+    const first = try self.parseElement() orelse return &.{};
+    try elements.append(self.alloc(), first);
+
+    while (self.match(.comma)) |_| {
+        const element = try self.parseElement() 
+            orelse return try elements.toOwnedSlice(self.alloc());
+
+        try elements.append(self.alloc(), element);
+    }
+
+    return try elements.toOwnedSlice(self.alloc());
 }
 
 fn parseAtom(self: *Self, str: []const u8) Element {
@@ -89,10 +108,10 @@ fn consume(self: *Self, kind: Token.Kind, msg: []const u8) Allocator.Error!void 
     }
 
     if (self.scanner.peek()) |incorrect_token| {
-        try self.reportErrorByToken(msg, incorrect_token, .start);
+        try self.reportError(msg, incorrect_token, .start);
     }
     else {
-        try self.reportErrorByToken(msg, self.scanner.consumed.?, .end);
+        try self.reportError(msg, self.scanner.consumed.?, .end);
     }
 
 }
@@ -108,15 +127,15 @@ fn match(self: Self, kind: Token.Kind) ?Token {
     return null;
 }
 
-fn reportErrorByToken(self: *Self, msg: []const u8, token: Token, target: enum{start, end}) Allocator.Error!void {
-    const offset = if (target == .end) @as(u32, @intCast(token.len())) - 1 else 0;
+fn reportError(self: *Self, msg: []const u8, token: Token, target: enum{start, end}) Allocator.Error!void {
+    const offset = if (target == .end) @as(u32, @intCast(token.len())) else 0;
     try self.errors.append(self.alloc(), .{
         .position = token.position.addToCol(offset),
         .message = msg,
     });
 }
 
-fn reportError(self: *Self, msg: []const u8, position: Position) Allocator.Error!void {
+fn reportErrorByPosition(self: *Self, msg: []const u8, position: Position) Allocator.Error!void {
         try self.errors.append(self.alloc(), .{
         .position = position,
         .message = msg,
@@ -131,6 +150,10 @@ fn isNumber(str: []const u8) bool {
     }
 
     return true;
+}
+
+fn getCheckedToken(self: *Self) Token {
+    return self.scanner.next() orelse unreachable;
 }
 
 fn dupe(self: *Self, e: Element) Allocator.Error!*const Element {

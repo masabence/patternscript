@@ -12,12 +12,14 @@ pub fn compile(gpa: Allocator, source: []const u8, writer: *std.Io.Writer) !void
     var scanner = Scanner.init(source);
     
     var parser = Parser.init(&scanner, gpa);
-    const elements = try parser.parse();
     defer parser.deinit();
+    const elements = parser.parse() catch {
+        for (parser.errors.items) |err| {
+            err.debug();
+        }
+        return;
+    };
 
-    for (parser.errors.items) |err| {
-        err.debug();
-    }
 
     if (parser.errors.items.len != 0) {
         return;
