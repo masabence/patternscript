@@ -6,7 +6,7 @@ lexeme: []const u8,
 position: Position,
 
 pub const Kind = enum {
-    string, pattern, identifier, name,
+    string, pattern, identifier, name, number,
     equal, plus, dash, comma, lcurly, rcurly,
     kw_any, kw_digit, kw_wordchar, kw_whitespace, kw_boundary, kw_not,
     kw_of, kw_from, kw_except, kw_chars, kw_range,

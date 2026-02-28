@@ -83,9 +83,9 @@ fn scanNext(self: *Self) ?Token {
             '{' => return self.makeToken(.lcurly),
             '}' => return self.makeToken(.rcurly),
 
-            '0'...'9' => return self.makeNumberIdentifier(),
+            '0'...'9' => return self.makeNumber(),
             'a'...'z', 
-            'A'...'Z', '_' => return self.makeAlphanumericIdentifier(),
+            'A'...'Z', '_' => return self.makeIdentifier(),
 
             '"' => return self.makeStringLiteral('"', .string),
             '<' => return self.makeStringLiteral('>', .name),
@@ -97,7 +97,7 @@ fn scanNext(self: *Self) ?Token {
     } else return null;
 }
 
-fn makeNumberIdentifier(self: *Self) Token {
+fn makeNumber(self: *Self) Token {
     while (self.advance()) |c| {
         if (!std.ascii.isDigit(c)) {
             self.current -= 1;
@@ -105,10 +105,10 @@ fn makeNumberIdentifier(self: *Self) Token {
         }
     }
 
-    return self.makeToken(.identifier);
+    return self.makeToken(.number);
 }
 
-fn makeAlphanumericIdentifier(self: *Self) Token {
+fn makeIdentifier(self: *Self) Token {
     while (self.advance()) |c| {
         if (!std.ascii.isAlphanumeric(c) and c != '_') {
             self.current -= 1;

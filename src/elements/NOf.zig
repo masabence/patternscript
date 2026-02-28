@@ -6,7 +6,7 @@ const Self = @This();
 
 n: []const u8,
 plus: bool,
-content: *Element,
+content: *const Element,
 
 
 pub fn compile(self: Self, writer: *Writer, strict: bool) Writer.Error!void {

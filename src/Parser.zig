@@ -61,6 +61,8 @@ fn parseElement(self: *Self) Error!?Element {
         .string => self.parseString(.string),
         .pattern => self.parseString(.pattern),
 
+        .number => try self.parseQuantifier(),
+
         .lcurly => try self.parseBlock(),
         .kw_capture => try self.parseCapture(),
 
@@ -117,6 +119,46 @@ fn parseString(self: *Self, comptime tag: std.meta.Tag(Element.Value)) Element {
         .start = token.position,
         .end = token.position.addToCol(@as(u32, @intCast(token.len())) - 1),
     };
+}
+
+fn parseQuantifier(self: *Self) Error!Element {
+    const n = self.getCheckedToken();
+
+    const allowed: []const Token.Kind = &.{.kw_of, .dash, .plus};
+
+    if (try self.matchMultipleOrError(.kw_of, allowed, "Unfinished quantifier")) |_| {
+        const content = try self.parseOrError("Missing content of quantifier");
+        return Element {
+            .value = .{ .n_of = .{ .content = try self.dupe(content), .n = n.lexeme, .plus = false } },
+            .start = n.position,
+            .end = content.end,
+        };
+    }
+
+    if (try self.matchMultipleOrError(.dash, allowed, "Unfinished quantifier")) |_| {
+
+        const m = try self.matchOrError(.number, "Expected number in quantifier");
+        _ = try self.matchOrError(.kw_of, "Expected 'of' in quantifier");
+        const content = try self.parseOrError("Missing content of quantifier");
+
+        return Element {
+            .value = .{ .n_to_m_of = .{ .content = try self.dupe(content), .n = n.lexeme, .m = m.lexeme } },
+            .start = n.position,
+            .end = content.end,
+        };
+    }
+
+    if (try self.matchMultipleOrError(.plus, allowed, "Unfinished quantifier")) |_| {
+        _ = try self.matchOrError(.kw_of, "Expected 'of' in quantifier");
+        const content = try self.parseOrError("Missing content of quantifier");
+        return Element {
+            .value = .{ .n_of = .{ .content = try self.dupe(content), .n = n.lexeme, .plus = true } },
+            .start = n.position,
+            .end = content.end,
+        };
+    }
+
+    unreachable;
 }
 
 fn parseCapture(self: *Self) Error!Element {
@@ -204,6 +246,25 @@ fn matchOrError(self: *Self, kind: Token.Kind, msg: []const u8) Error!Token {
         try self.reportError(msg, self.scanner.consumed.?, .start);
         return Error.ParseError;
     };
+}
+
+fn matchMultipleOrError(self: *Self, target: Token.Kind, allowed: []const Token.Kind, msg: []const u8) Error!?Token {
+    const peeked = self.scanner.peek() orelse {
+        try self.reportError(msg, self.scanner.consumed.?, .end);
+        return Error.ParseError;
+    };
+
+    if (peeked.kind == target) {
+        return self.scanner.next();
+    }
+
+    if (std.mem.containsAtLeast(Token.Kind, allowed, 1, &.{peeked.kind})) {
+        return null;
+    }
+    else {
+        try self.reportError(msg, self.scanner.peek().?, .start);
+        return Error.ParseError;
+    }
 }
 
 fn format(self: *Self, comptime fmt: []const u8, args: anytype) Allocator.Error![]const u8 {
