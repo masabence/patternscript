@@ -29,7 +29,7 @@ pub fn deinit(self: *Self) void {
 }
 
 /// Result owned by the parser, freed with `deinit`
-pub fn parse(self: *Self) Error![]Element {
+pub fn parse(self: *Self) Error![]const Element {
     const elements = try self.parseList();
 
     if (self.scanner.peek() != null) {
@@ -58,8 +58,8 @@ fn parseElement(self: *Self) Error!?Element {
         .kw_start => self.parseAtom("^"),
         .kw_end => self.parseAtom("$"),
 
-        .string => self.parseString(.string),
-        .pattern => self.parseString(.pattern),
+        .string => self.parseString(Element.Value.initString),
+        .pattern => self.parseString(Element.Value.initPattern),
 
         .number => try self.parseQuantifier(),
 
@@ -70,7 +70,7 @@ fn parseElement(self: *Self) Error!?Element {
     };
 }
 
-fn parseList(self: *Self) Error![]Element {
+fn parseList(self: *Self) Error![]const Element {
     var elements: std.ArrayList(Element) = .empty;
 
     const first = try self.parseElement() orelse return &.{};
@@ -95,7 +95,7 @@ fn parseBlock(self: *Self) Error!Element {
     );
 
     return Element {
-        .value = .{ .block = .{ .contents = contents } },
+        .value = .initBlock(contents),
         .start = opening.position,
         .end = closing.position,
     };
@@ -111,11 +111,11 @@ fn parseAtom(self: *Self, str: []const u8) Element {
     };
 }
 
-fn parseString(self: *Self, comptime tag: std.meta.Tag(Element.Value)) Element {
+fn parseString(self: *Self, factory: fn([]const u8) Element.Value) Element {
     const token = self.getCheckedToken();
 
     return Element {
-        .value = @unionInit(Element.Value, @tagName(tag), .{ .str = token.stringValue(), } ),
+        .value = factory(token.stringValue()),
         .start = token.position,
         .end = token.position.addToCol(@as(u32, @intCast(token.len())) - 1),
     };
@@ -129,7 +129,17 @@ fn parseQuantifier(self: *Self) Error!Element {
     if (try self.matchMultipleOrError(.kw_of, allowed, "Unfinished quantifier")) |_| {
         const content = try self.parseOrError("Missing content of quantifier");
         return Element {
-            .value = .{ .n_of = .{ .content = try self.dupe(content), .n = n.lexeme, .plus = false } },
+            .value = .initNOf(n.lexeme, try self.dupe(content), false),
+            .start = n.position,
+            .end = content.end,
+        };
+    }
+
+    if (try self.matchMultipleOrError(.plus, allowed, "Unfinished quantifier")) |_| {
+        _ = try self.matchOrError(.kw_of, "Expected 'of' in quantifier");
+        const content = try self.parseOrError("Missing content of quantifier");
+        return Element {
+            .value = .initNOf(n.lexeme, try self.dupe(content), true),
             .start = n.position,
             .end = content.end,
         };
@@ -142,17 +152,7 @@ fn parseQuantifier(self: *Self) Error!Element {
         const content = try self.parseOrError("Missing content of quantifier");
 
         return Element {
-            .value = .{ .n_to_m_of = .{ .content = try self.dupe(content), .n = n.lexeme, .m = m.lexeme } },
-            .start = n.position,
-            .end = content.end,
-        };
-    }
-
-    if (try self.matchMultipleOrError(.plus, allowed, "Unfinished quantifier")) |_| {
-        _ = try self.matchOrError(.kw_of, "Expected 'of' in quantifier");
-        const content = try self.parseOrError("Missing content of quantifier");
-        return Element {
-            .value = .{ .n_of = .{ .content = try self.dupe(content), .n = n.lexeme, .plus = true } },
+            .value = .initNToMOf(n.lexeme, m.lexeme, try self.dupe(content)),
             .start = n.position,
             .end = content.end,
         };
@@ -167,7 +167,7 @@ fn parseCapture(self: *Self) Error!Element {
     const content = try self.parseOrError("Expected body for 'capture'");
 
     return Element {
-        .value = .{ .capture = .{ .content = try self.dupe(content), .name = name } },
+        .value = .initCapture(name, try self.dupe(content)),
         .start = head.position,
         .end = content.end,
     };

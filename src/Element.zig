@@ -21,50 +21,6 @@ value: Value,
 start: Position,
 end: Position,
 
-// pub fn initAtom(str: []const u8) Value {
-//     return .{ .atom = str };
-// }
-
-// pub fn initNot(content: *const Element) Value {
-//     return .{ .not = Not { .content = content} };
-// }
-
-// pub fn initString(str: []const u8) Value {
-//     return .{ .string = String { .str = str} };
-// }
-
-// pub fn initPattern(str: []const u8) Value {
-//     return .{ .pattern = Pattern { .str = str} };
-// }
-
-// pub fn initBlock(contents: []const Element) Value {
-//     return .{ .block = Block { .contents = contents} };
-// }
-
-// pub fn initNOf(n: []const u8, content: *const Element, plus: bool) Value {
-//     return .{ .n_of = NOf { .n = n, .content = content, .plus = plus } };
-// }
-
-// pub fn initNToMOf(n: []const u8, m: []const u8, content: *const Element) Value {
-//     return .{ .n_to_m_of = NToMOf { .n = n, .m = m, .content = content } };
-// }
-
-// pub fn initOptional(content: *const Element) Value {
-//     return .{ .optional = Optional { .content = content} };
-// }
-
-pub fn initCapture(content: *const Element) Value {
-    return .{ .capture = Capture { .content = content } };
-}
-
-// pub fn initEitherOr(contents: []const Element) Value {
-//     return .{ .either_or = EitherOr { .contents = contents } };
-// }
-
-// pub fn initCharset(content: *const Element, negated: bool) Value {
-//     return .{ .charset = Charset { .content = content, .negated = negated } };
-// }
-
 pub const Value = union(enum) {
     atom: []const u8,
     not: Not,
@@ -77,7 +33,6 @@ pub const Value = union(enum) {
     capture: Capture,
     either_or: EitherOr,
     charset: Charset,
-
 
     pub fn compile(self: Value, writer: *Writer, strict: bool) Writer.Error!void {
         switch (self) {
@@ -94,5 +49,49 @@ pub const Value = union(enum) {
             .charset => |charset| try charset.compile(writer),
             // else => std.debug.panic("Unimplemented element: {any}", .{@tagName(self)}),
         }
+    }
+
+    pub fn initAtom(str: []const u8) Value {
+        return .{ .atom = str };
+    }
+
+    pub fn initNot(content: *const Element) Value {
+        return .{ .not = Not { .content = content} };
+    }
+
+    pub fn initString(str: []const u8) Value {
+        return .{ .string = String { .str = str } };
+    }
+
+    pub fn initPattern(str: []const u8) Value {
+        return .{ .pattern = Pattern { .str = str } };
+    }
+
+    pub fn initBlock(contents: []const Element) Value {
+        return .{ .block = Block { .contents = contents} };
+    }
+
+    pub fn initNOf(n: []const u8, content: *const Element, plus: bool) Value {
+        return .{ .n_of = NOf { .n = n, .content = content, .plus = plus } };
+    }
+
+    pub fn initNToMOf(n: []const u8, m: []const u8, content: *const Element) Value {
+        return .{ .n_to_m_of = NToMOf { .n = n, .m = m, .content = content } };
+    }
+
+    pub fn initOptional(content: *const Element) Value {
+        return .{ .optional = Optional { .content = content} };
+    }
+
+    pub fn initCapture(name: ?[]const u8, content: *const Element) Value {
+        return .{ .capture = Capture { .name = name, .content = content } };
+    }
+
+    pub fn initEitherOr(contents: []const Element) Value {
+        return .{ .either_or = EitherOr { .contents = contents } };
+    }
+
+    pub fn initCharset(content: *const Element, negated: bool) Value {
+        return .{ .charset = Charset { .content = content, .negated = negated } };
     }
 };

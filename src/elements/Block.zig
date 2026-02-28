@@ -4,7 +4,7 @@ const Element = @import("../element.zig");
 
 const Self = @This();
 
-contents: []Element,
+contents: []const Element,
 
 
 pub fn compile(self: Self, writer: *Writer, strict: bool) Writer.Error!void {
