@@ -34,7 +34,7 @@ pub fn parse(self: *Self) Error![]Element {
 
     if (self.scanner.peek() != null) {
         try self.reportError("Expected comma after element", self.scanner.consumed.?, .end);
-        return Error.InvalidConstruct;
+        return Error.ParseError;
     }
 
     return elements;
@@ -44,10 +44,9 @@ pub fn parse(self: *Self) Error![]Element {
 /// Main dispatch for the parser.
 /// 
 /// Returns:
-/// * `Element` on success.
-/// * `null` after the stream ended.
-/// * `error.MissingToken` when a token was needed, but not found.
-/// * `error.InvalidConstruct`when a wrong token was found.
+/// * `Element` on success,
+/// * `null` if the token is not an entry point,
+/// * `ParseError` on incorrect input.
 fn parseElement(self: *Self) Error!?Element {
     const t = self.scanner.peek() orelse return null;
 
@@ -89,14 +88,9 @@ fn parseBlock(self: *Self) Error!Element {
     const opening = self.getCheckedToken();
     const contents = try self.parseList();
 
-    const closing = self.match(.rcurly) orelse {
-        try self.reportError(
-            try self.format("Unclosed curly brace (opened on {}:{})", .{opening.position.line, opening.position.col}), 
-            self.scanner.consumed.?,
-            .start,
-        );
-        return Error.InvalidConstruct;
-    };
+    const closing = try self.matchOrError(.rcurly, 
+        try self.format("Unclosed curly brace (opened on {}:{})", .{opening.position.line, opening.position.col})
+    );
 
     return Element {
         .value = .{ .block = .{ .contents = contents } },
@@ -107,7 +101,7 @@ fn parseBlock(self: *Self) Error!Element {
 }
 
 fn parseAtom(self: *Self, str: []const u8) Element {
-    const token = self.scanner.next() orelse unreachable;
+    const token = self.getCheckedToken();
     return Element {
         .value = .{ .atom = str },
         .start = token.position,
@@ -116,7 +110,7 @@ fn parseAtom(self: *Self, str: []const u8) Element {
 }
 
 fn parseString(self: *Self, comptime tag: std.meta.Tag(Element.Value)) Element {
-    const token = self.scanner.next() orelse unreachable;
+    const token = self.getCheckedToken();
 
     return Element {
         .value = @unionInit(Element.Value, @tagName(tag), .{ .str = token.stringValue(), } ),
@@ -128,10 +122,7 @@ fn parseString(self: *Self, comptime tag: std.meta.Tag(Element.Value)) Element {
 fn parseCapture(self: *Self) Error!Element {
     const head = self.getCheckedToken();
     const name = if (self.match(.name)) |token| token.stringValue() else null;
-    const content = try self.parseElement() orelse {
-        try self.reportError("Expected body for 'capture'", self.scanner.consumed.?, .end);
-        return Error.MissingToken;
-    };
+    const content = try self.parseOrError("Expected body for 'capture'");
 
     return Element {
         .value = .{ .capture = .{ .content = try self.dupe(content), .name = name } },
@@ -168,14 +159,11 @@ fn match(self: Self, kind: Token.Kind) ?Token {
 
 fn reportError(self: *Self, msg: []const u8, token: Token, target: enum{start, end}) Allocator.Error!void {
     const offset = if (target == .end) @as(u32, @intCast(token.len())) else 0;
-    try self.errors.append(self.alloc(), .{
-        .position = token.position.addToCol(offset),
-        .message = msg,
-    });
+    try self.reportErrorByPosition(msg, token.position.addToCol(offset));
 }
 
 fn reportErrorByPosition(self: *Self, msg: []const u8, position: Position) Allocator.Error!void {
-        try self.errors.append(self.alloc(), .{
+    try self.errors.append(self.alloc(), .{
         .position = position,
         .message = msg,
     });
@@ -195,6 +183,29 @@ fn getCheckedToken(self: *Self) Token {
     return self.scanner.next() orelse unreachable;
 }
 
+fn nextOrError(self: *Self, msg: []const u8) error{ParseError}!Token {
+    if (self.scanner.next()) |next| {
+        return next;
+    }
+
+    try self.reportError(msg, self.scanner.consumed.?, .end);
+    return error.ParseError;
+}
+
+fn parseOrError(self: *Self, msg: []const u8) Error!Element {
+    return try self.parseElement() orelse {
+        try self.reportError(msg, self.scanner.consumed.?, .end);
+        return Error.ParseError;
+    };
+}
+
+fn matchOrError(self: *Self, kind: Token.Kind, msg: []const u8) Error!Token {
+    return self.match(kind) orelse {
+        try self.reportError(msg, self.scanner.consumed.?, .start);
+        return Error.ParseError;
+    };
+}
+
 fn format(self: *Self, comptime fmt: []const u8, args: anytype) Allocator.Error![]const u8 {
     return std.fmt.allocPrint(self.alloc(), fmt, args);
 }
@@ -211,6 +222,4 @@ fn alloc(self: *Self) std.mem.Allocator {
 }
 
 
-
-
-pub const Error = error{InvalidConstruct, MissingToken} || Allocator.Error;
+pub const Error = error{ParseError} || Allocator.Error;
