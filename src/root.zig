@@ -4,7 +4,7 @@ const Allocator = std.mem.Allocator;
 const Scanner = @import("Scanner.zig");
 const Parser = @import("Parser.zig");
 
-const Value = @import("element.zig").Value;
+const Element = @import("Element.zig");
 
 
 pub fn compile(gpa: Allocator, source: []const u8, writer: *std.Io.Writer) !void {
