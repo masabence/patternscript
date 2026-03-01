@@ -90,9 +90,7 @@ fn parseBlock(self: *Self) Error!Element {
     const opening = self.getCheckedToken();
     const contents = try self.parseList();
 
-    const closing = try self.matchOrError(.rcurly, 
-        try self.format("Unclosed curly brace (opened on {f})", .{opening.position})
-    );
+    const closing = try self.matchOrError(.rcurly);
 
     return Element {
         .value = .initBlock(contents),
@@ -124,7 +122,7 @@ fn parseString(self: *Self, factory: fn([]const u8) Element.Value) Element {
 fn parseQuantifier(self: *Self) Error!Element {
     const n = self.getCheckedToken();
 
-    try self.limit(&.{.kw_of, .plus, .dash}, "Expected 'of', '+', or '-'");
+    try self.limit(&.{.kw_of, .plus, .dash});
 
     if (self.match(.kw_of)) |_| {
         const content = try self.parseOrError("Missing content of quantifier");
@@ -136,7 +134,7 @@ fn parseQuantifier(self: *Self) Error!Element {
     }
 
     if (self.match(.plus)) |_| {
-        _ = try self.matchOrError(.kw_of, "Expected 'of' in quantifier");
+        _ = try self.matchOrError(.kw_of);
         const content = try self.parseOrError("Missing content of quantifier");
         return Element {
             .value = .initNOf(n.lexeme, try self.dupe(content), true),
@@ -147,8 +145,8 @@ fn parseQuantifier(self: *Self) Error!Element {
 
     if (self.match(.dash)) |_| {
 
-        const m = try self.matchOrError(.number, "Expected number in quantifier");
-        _ = try self.matchOrError(.kw_of, "Expected 'of' in quantifier");
+        const m = try self.matchOrError(.number);
+        _ = try self.matchOrError(.kw_of);
         const content = try self.parseOrError("Missing content of quantifier");
 
         return Element {
@@ -231,23 +229,57 @@ fn parseOrError(self: *Self, msg: []const u8) Error!Element {
     };
 }
 
-fn matchOrError(self: *Self, kind: Token.Kind, msg: []const u8) Error!Token {
-    return self.match(kind) orelse {
-        try self.reportError(msg, self.scanner.consumed.?, .start);
-        return Error.ParseError;
-    };
+fn matchOrError(self: *Self, kind: Token.Kind) Error!Token {
+    if (self.match(kind)) |matched| {
+        return matched;
+    }
+
+    const msg: []const u8 = if (self.scanner.peek()) |peeked|
+        try self.format("Expected {f}, found {f}", .{ kind, peeked.kind })
+    else
+        try self.format("Expected {f}", .{kind});
+
+
+    if (self.scanner.peek()) |peeked| {
+        try self.reportError(msg, peeked, .start);
+    }
+    else {
+        try self.reportError(msg, self.scanner.consumed.?, .end);
+    }
+
+    return Error.ParseError;
+
 }
 
-fn limit(self: *Self, allowed: []const Token.Kind, msg: []const u8) Error!void {
-    const peeked = self.scanner.peek() orelse {
+fn limit(self: *Self, allowed: []const Token.Kind) Error!void {
+    if (self.scanner.peek()) |peeked| {
+        if (!std.mem.containsAtLeast(Token.Kind, allowed, 1, &.{peeked.kind})) {
+            const msg = try self.buildExpectedMsg(allowed, peeked.kind);
+            try self.reportError(msg, self.scanner.peek().?, .start);
+            return Error.ParseError;
+        }
+    }
+    else {
+        const msg = try self.buildExpectedMsg(allowed, null);
         try self.reportError(msg, self.scanner.consumed.?, .end);
         return Error.ParseError;
-    };
-
-    if (!std.mem.containsAtLeast(Token.Kind, allowed, 1, &.{peeked.kind})) {
-        try self.reportError(msg, self.scanner.peek().?, .start);
-        return Error.ParseError;
     }
+}
+
+fn buildExpectedMsg(self: *Self, allowed: []const Token.Kind, found: ?Token.Kind) Allocator.Error![]const u8 {
+    var msg_writer: std.Io.Writer.Allocating = .init(self.alloc());
+
+    msg_writer.writer.writeAll("Expected ") catch return Error.OutOfMemory;
+    for (allowed[0..allowed.len-1]) |kind| {
+        msg_writer.writer.print("{f}, ", .{kind}) catch return Error.OutOfMemory;
+    }
+    msg_writer.writer.print("or {f}", .{allowed[allowed.len-1]}) catch return Error.OutOfMemory;
+
+    if (found) |f| {
+        msg_writer.writer.print(", found {f}", .{f}) catch return Error.OutOfMemory;
+    }
+
+    return msg_writer.toOwnedSlice();
 }
 
 fn format(self: *Self, comptime fmt: []const u8, args: anytype) Allocator.Error![]const u8 {

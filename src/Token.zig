@@ -1,5 +1,7 @@
-const Self = @This();
+const std = @import("std");
 const Position = @import("Position.zig");
+
+const Self = @This();
 
 kind: Kind,
 lexeme: []const u8,
@@ -16,6 +18,43 @@ pub const Kind = enum {
     kw_let,
     kw_start, kw_end,
     illegal,
+
+    pub fn format(self: Kind, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+        const str = switch (self) {
+            .string => "string literal",
+            .pattern => "pattern literal",
+            .identifier => "identifier",
+            .name => "name literal",
+            .number => "number literal",
+            .equal => "'='",
+            .plus => "'+'",
+            .dash => "'-'",
+            .comma => "','",
+            .lcurly => "'{'",
+            .rcurly => "'}'",
+            .kw_any => "'any'",
+            .kw_digit => "'digit'",
+            .kw_wordchar => "'wordchar'",
+            .kw_whitespace => "'whitespace'",
+            .kw_boundary => "'boundary'",
+            .kw_not => "'not'",
+            .kw_of => "'of'",
+            .kw_from => "'from'",
+            .kw_except => "'except'",
+            .kw_chars => "'chars'",
+            .kw_range => "'range'",
+            .kw_either => "'either'",
+            .kw_or => "'or'",
+            .kw_capture => "'capture'",
+            .kw_optional => "'optional'",
+            .kw_let => "'let'",
+            .kw_start => "'start'",
+            .kw_end => "'end'",
+            .illegal => "illegal",
+        };
+
+        try writer.writeAll(str);
+    }
 };
 
 pub fn len(self: Self) usize {
