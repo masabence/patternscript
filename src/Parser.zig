@@ -41,13 +41,31 @@ pub fn parse(self: *Self) Error![]const Element {
 
 }
 
-/// Main dispatch for the parser.
-/// 
-/// Returns:
-/// * `Element` on success,
-/// * `null` if the token is not an entry point,
-/// * `ParseError` on incorrect input.
 fn parseElement(self: *Self) Error!?Element {
+    var branches_list: std.ArrayList(Element) = .empty;
+
+    const lhs = try self.parseSimpleElement() orelse return null;
+    try branches_list.append(self.alloc(), lhs);
+
+    while (self.match(.kw_or)) |_| {
+        const branch = try self.parseSimpleOrError("Expected another branch after 'or'");
+        try branches_list.append(self.alloc(), branch);
+    }
+
+    if (branches_list.items.len == 1) {
+        return branches_list.items[0];
+    }
+
+    const branches = try branches_list.toOwnedSlice(self.alloc());
+
+    return Element {
+        .value = .initEitherOr(branches),
+        .start = lhs.start,
+        .end = branches[branches.len-1].end,
+    };
+}
+
+fn parseSimpleElement(self: *Self) Error!?Element {
     const t = self.scanner.peek() orelse return null;
 
     return switch (t.kind) {
@@ -237,6 +255,13 @@ fn nextOrError(self: *Self, msg: []const u8) error{ParseError}!Token {
 
 fn parseOrError(self: *Self, msg: []const u8) Error!Element {
     return try self.parseElement() orelse {
+        try self.reportError(msg, self.scanner.consumed.?, .end);
+        return Error.ParseError;
+    };
+}
+
+fn parseSimpleOrError(self: *Self, msg: []const u8) Error!Element {
+    return try self.parseSimpleElement() orelse {
         try self.reportError(msg, self.scanner.consumed.?, .end);
         return Error.ParseError;
     };
