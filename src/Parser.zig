@@ -172,21 +172,6 @@ fn parseCapture(self: *Self) Error!Element {
     
 }
 
-fn consume(self: *Self, kind: Token.Kind, msg: []const u8) Allocator.Error!void {
-    if (self.match(kind)) |_| {
-        return;
-    }
-
-    if (self.scanner.peek()) |incorrect_token| {
-        try self.reportError(msg, incorrect_token, .start);
-    }
-    else {
-        try self.reportError(msg, self.scanner.consumed.?, .end);
-    }
-
-}
-
-
 fn match(self: Self, kind: Token.Kind) ?Token {    
     if (self.scanner.peek()) |token| {
         if (token.kind == kind) {
