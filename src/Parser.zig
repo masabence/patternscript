@@ -124,9 +124,9 @@ fn parseString(self: *Self, factory: fn([]const u8) Element.Value) Element {
 fn parseQuantifier(self: *Self) Error!Element {
     const n = self.getCheckedToken();
 
-    const allowed: []const Token.Kind = &.{.kw_of, .dash, .plus};
+    try self.limit(&.{.kw_of, .plus, .dash}, "Expected 'of', '+', or '-'");
 
-    if (try self.matchMultipleOrError(.kw_of, allowed, "Unfinished quantifier")) |_| {
+    if (self.match(.kw_of)) |_| {
         const content = try self.parseOrError("Missing content of quantifier");
         return Element {
             .value = .initNOf(n.lexeme, try self.dupe(content), false),
@@ -135,7 +135,7 @@ fn parseQuantifier(self: *Self) Error!Element {
         };
     }
 
-    if (try self.matchMultipleOrError(.plus, allowed, "Unfinished quantifier")) |_| {
+    if (self.match(.plus)) |_| {
         _ = try self.matchOrError(.kw_of, "Expected 'of' in quantifier");
         const content = try self.parseOrError("Missing content of quantifier");
         return Element {
@@ -145,7 +145,7 @@ fn parseQuantifier(self: *Self) Error!Element {
         };
     }
 
-    if (try self.matchMultipleOrError(.dash, allowed, "Unfinished quantifier")) |_| {
+    if (self.match(.dash)) |_| {
 
         const m = try self.matchOrError(.number, "Expected number in quantifier");
         _ = try self.matchOrError(.kw_of, "Expected 'of' in quantifier");
@@ -248,20 +248,13 @@ fn matchOrError(self: *Self, kind: Token.Kind, msg: []const u8) Error!Token {
     };
 }
 
-fn matchMultipleOrError(self: *Self, target: Token.Kind, allowed: []const Token.Kind, msg: []const u8) Error!?Token {
+fn limit(self: *Self, allowed: []const Token.Kind, msg: []const u8) Error!void {
     const peeked = self.scanner.peek() orelse {
         try self.reportError(msg, self.scanner.consumed.?, .end);
         return Error.ParseError;
     };
 
-    if (peeked.kind == target) {
-        return self.scanner.next();
-    }
-
-    if (std.mem.containsAtLeast(Token.Kind, allowed, 1, &.{peeked.kind})) {
-        return null;
-    }
-    else {
+    if (!std.mem.containsAtLeast(Token.Kind, allowed, 1, &.{peeked.kind})) {
         try self.reportError(msg, self.scanner.peek().?, .start);
         return Error.ParseError;
     }
