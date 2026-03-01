@@ -211,16 +211,6 @@ fn reportErrorByPosition(self: *Self, msg: []const u8, position: Position) Alloc
     });
 }
 
-fn isNumber(str: []const u8) bool {
-    for (str) |c| {
-        if (!std.ascii.isDigit(c)) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
 fn getCheckedToken(self: *Self) Token {
     return self.scanner.next() orelse unreachable;
 }
