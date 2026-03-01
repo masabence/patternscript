@@ -62,9 +62,12 @@ fn parseElement(self: *Self) Error!?Element {
         .pattern => self.parseString(Element.Value.initPattern),
 
         .number => try self.parseQuantifier(),
+        .kw_optional => try self.parseOptional(),
 
         .lcurly => try self.parseBlock(),
+
         .kw_capture => try self.parseCapture(),
+        .kw_not => try self.parseNot(),
 
         else => return null,
     };
@@ -159,6 +162,17 @@ fn parseQuantifier(self: *Self) Error!Element {
     unreachable;
 }
 
+fn parseOptional(self: *Self) Error!Element {
+    const head = self.getCheckedToken();
+    const content = try self.parseOrError("Expected body for 'optional'");
+
+    return Element {
+        .value = .initOptional(try self.dupe(content)),
+        .start = head.position,
+        .end = content.end,
+    };
+}
+
 fn parseCapture(self: *Self) Error!Element {
     const head = self.getCheckedToken();
     const name = if (self.match(.name)) |token| token.stringValue() else null;
@@ -170,6 +184,20 @@ fn parseCapture(self: *Self) Error!Element {
         .end = content.end,
     };
     
+}
+
+fn parseNot(self: *Self) Error!Element {
+    const head = self.getCheckedToken();
+
+    try self.limit(&.{.kw_digit, .kw_wordchar, .kw_whitespace, .kw_boundary});
+    const content = self.parseElement() catch unreachable orelse unreachable;
+
+    return Element {
+        .value = .initNot(try self.dupe(content)),
+        .start = head.position,
+        .end = content.end,
+    };
+
 }
 
 fn match(self: Self, kind: Token.Kind) ?Token {    
