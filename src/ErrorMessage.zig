@@ -7,5 +7,5 @@ position: Position,
 message: []const u8,
 
 pub fn debug(self: Self) void {
-    std.debug.print("[{}, {}] Error: {s}\n", .{self.position.line, self.position.col, self.message});
+    std.debug.print("[{f}] Error: {s}\n", .{self.position, self.message});
 }

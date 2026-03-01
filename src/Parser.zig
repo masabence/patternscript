@@ -91,7 +91,7 @@ fn parseBlock(self: *Self) Error!Element {
     const contents = try self.parseList();
 
     const closing = try self.matchOrError(.rcurly, 
-        try self.format("Unclosed curly brace (opened on {}:{})", .{opening.position.line, opening.position.col})
+        try self.format("Unclosed curly brace (opened on {f})", .{opening.position})
     );
 
     return Element {
