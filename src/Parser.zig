@@ -84,6 +84,9 @@ fn parseSimpleElement(self: *Self) Error!?Element {
 
         .lcurly => try self.parseBlock(),
 
+        .kw_let => try self.parseLetBinding(),
+        .identifier => try self.parseIdentifier(),
+
         .kw_capture => try self.parseCapture(),
         .kw_not => try self.parseNot(),
 
@@ -119,6 +122,38 @@ fn parseBlock(self: *Self) Error!Element {
         .end = closing.position,
     };
 
+}
+
+fn parseLetBinding(self: *Self) Error!Element {
+    const let = self.getCheckedToken();
+    const name_token = try self.matchOrError(.identifier);
+
+    if (self.bindings.contains(name_token.lexeme)) {
+        try self.reportError("Identifier already in use", name_token, .start);
+        return Error.ParseError;
+    }
+
+    _ = try self.matchOrError(.equal);
+
+    const content = try self.parseOrError("Expected element after '='");
+    try self.bindings.put(self.alloc(), name_token.lexeme, content);
+
+    return Element {
+        .value = .initLetBinding(name_token.lexeme, try self.dupe(content)),
+        .start = let.position,
+        .end = content.end,
+    };
+}
+
+fn parseIdentifier(self: *Self) Error!Element {
+    const identifier = self.getCheckedToken();
+
+    const content = self.bindings.get(identifier.lexeme) orelse {
+        try self.reportError("Unknown identifier", identifier, .start);
+        return Error.ParseError;
+    };
+
+    return content;
 }
 
 fn parseAtom(self: *Self, str: []const u8) Element {
