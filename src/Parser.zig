@@ -79,6 +79,8 @@ fn parseSimpleElement(self: *Self) Error!?Element {
         .string => self.parseString(Element.Value.initString),
         .pattern => self.parseString(Element.Value.initPattern),
 
+        .kw_any => try self.parseAny(),
+
         .number => try self.parseQuantifier(),
         .kw_optional => try self.parseOptional(),
 
@@ -213,6 +215,35 @@ fn parseQuantifier(self: *Self) Error!Element {
     }
 
     unreachable;
+}
+
+fn parseAny(self: *Self) Error!Element {
+    const any = self.getCheckedToken();
+
+    if (self.match(.kw_from)) |_| {
+
+        const content = try self.parseSimpleOrError("Expected body for character set");
+        return Element {
+            .value = .initCharset(try self.dupe(content), false),
+            .start = any.position,
+            .end = content.end,
+        };
+    }
+
+    if (self.match(.kw_except)) |_| {
+        const content = try self.parseSimpleOrError("Expected body for character set");
+        return Element {
+            .value = .initCharset(try self.dupe(content), true),
+            .start = any.position,
+            .end = content.end,
+        };
+    }
+
+    return Element {
+        .value = .initAtom("."),
+        .start = any.position,
+        .end = any.position.addToCol(@as(u32, @intCast(any.len())) - 1),
+    };
 }
 
 fn parseOptional(self: *Self) Error!Element {
