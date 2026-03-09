@@ -90,7 +90,7 @@ fn scanNext(self: *Self) ?Token {
             '"' => return self.makeStringLiteral('"', .string),
             '<' => return self.makeStringLiteral('>', .name),
             '/' => return self.makeStringLiteral('/', .pattern),
-            '[' => return self.makeStringLiteral(']', .pattern),
+            '[' => return self.makeStringLiteral(']', .charset),
             else => std.debug.panic("Unhandled token character: {c}", .{c}),
         }
 

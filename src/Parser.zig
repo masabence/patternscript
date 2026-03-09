@@ -78,6 +78,7 @@ fn parseSimpleElement(self: *Self) Error!?Element {
 
         .string => self.parseString(Element.Value.initString),
         .pattern => self.parseString(Element.Value.initPattern),
+        .charset => self.parseString(Element.Value.initCharsetItem),
 
         .kw_any => try self.parseAny(),
 

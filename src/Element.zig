@@ -14,6 +14,7 @@ pub const Optional = @import("elements/Optional.zig");
 pub const Capture = @import("elements/Capture.zig");
 pub const EitherOr = @import("elements/EitherOr.zig");
 pub const Charset = @import("elements/Charset.zig");
+pub const CharsetItem = @import("elements/CharsetItem.zig");
 pub const LetBinding = @import("elements/LetBinding.zig");
 
 const Element = @This();
@@ -34,6 +35,7 @@ pub const Value = union(enum) {
     capture: Capture,
     either_or: EitherOr,
     charset: Charset,
+    charset_item: CharsetItem,
     let_binding: LetBinding,
 
     pub fn compile(self: Value, writer: *Writer, strict: bool) Writer.Error!void {
@@ -49,6 +51,7 @@ pub const Value = union(enum) {
             .capture => |capture| try capture.compile(writer),
             .either_or => |either_or| try either_or.compile(writer),
             .charset => |charset| try charset.compile(writer),
+            .charset_item => |charset_item| try charset_item.compile(writer),
             .let_binding => {},
             // else => std.debug.panic("Unimplemented element: {any}", .{@tagName(self)}),
         }
@@ -96,6 +99,10 @@ pub const Value = union(enum) {
 
     pub fn initCharset(content: *const Element, negated: bool) Value {
         return .{ .charset = Charset { .content = content, .negated = negated } };
+    }
+
+    pub fn initCharsetItem(str: []const u8) Value {
+        return .{ .charset_item = CharsetItem { .str = str } };
     }
 
     pub fn initLetBinding(name: []const u8, content: *const Element) Value {
