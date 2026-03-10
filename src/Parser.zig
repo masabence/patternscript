@@ -99,15 +99,24 @@ fn parseSimpleElement(self: *Self) Error!?Element {
 
 fn parseList(self: *Self) Error![]const Element {
     var elements: std.ArrayList(Element) = .empty;
+    var errored = false;
 
-    const first = try self.parseElement() orelse return &.{};
-    try elements.append(self.alloc(), first);
+    while (true) {
+        const content = self.parseElement() catch {
+            try self.sync();
+            errored = true;
+            continue;
+        } orelse break;
 
-    while (self.match(.comma)) |_| {
-        const element = try self.parseElement() 
-            orelse return try elements.toOwnedSlice(self.alloc());
+        try elements.append(self.alloc(), content);
 
-        try elements.append(self.alloc(), element);
+        if (self.match(.comma) == null) {
+            break;
+        }
+    }
+
+    if (errored) {
+        return Error.ParseError;
     }
 
     return try elements.toOwnedSlice(self.alloc());
@@ -385,6 +394,14 @@ fn buildExpectedMsg(self: *Self, allowed: []const Token.Kind, found: ?Token.Kind
     }
 
     return msg_writer.toOwnedSlice();
+}
+
+fn sync(self: *Self) Allocator.Error!void {
+    while (self.scanner.next()) |next| {
+        if (next.kind == .comma) {
+            break;
+        }
+    }
 }
 
 fn format(self: *Self, comptime fmt: []const u8, args: anytype) Allocator.Error![]const u8 {
