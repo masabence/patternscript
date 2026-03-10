@@ -5,30 +5,26 @@ const Token = @import("Token.zig");
 const ErrorMessage = @import("ErrorMessage.zig");
 const Position = @import("Position.zig");
 const Allocator = std.mem.Allocator;
+const ErrorMessageList = std.ArrayList(ErrorMessage);
 
 const Self = @This();
 
 
 scanner: *Scanner,
-arena: std.heap.ArenaAllocator,
-errors: std.ArrayList(ErrorMessage),
+arena: Allocator,
+errors: *ErrorMessageList,
 bindings: std.StringHashMapUnmanaged(Element),
-depth: u32 = 0,
 
-pub fn init(scanner: *Scanner, gpa: Allocator) Self {
+pub fn init(arena: Allocator, scanner: *Scanner, errors: *ErrorMessageList) Self {
     return .{
         .scanner = scanner,
-        .arena = .init(gpa),
-        .errors = .empty,
+        .arena = arena,
+        .errors = errors,
         .bindings = .empty,
     };
 }
 
-pub fn deinit(self: *Self) void {
-    self.arena.deinit();
-}
-
-/// Result owned by the parser, freed with `deinit`
+/// Result owned by the arena
 pub fn parse(self: *Self) Error![]const Element {
     const elements = try self.parseList();
 
@@ -45,18 +41,18 @@ fn parseElement(self: *Self) Error!?Element {
     var branches_list: std.ArrayList(Element) = .empty;
 
     const lhs = try self.parseSimpleElement() orelse return null;
-    try branches_list.append(self.alloc(), lhs);
+    try branches_list.append(self.arena, lhs);
 
     while (self.match(.kw_or)) |_| {
         const branch = try self.parseSimpleOrError("Expected another branch after 'or'");
-        try branches_list.append(self.alloc(), branch);
+        try branches_list.append(self.arena, branch);
     }
 
     if (branches_list.items.len == 1) {
         return branches_list.items[0];
     }
 
-    const branches = try branches_list.toOwnedSlice(self.alloc());
+    const branches = try branches_list.toOwnedSlice(self.arena);
 
     return Element {
         .value = .initEitherOr(branches),
@@ -108,7 +104,7 @@ fn parseList(self: *Self) Error![]const Element {
             continue;
         } orelse break;
 
-        try elements.append(self.alloc(), content);
+        try elements.append(self.arena, content);
 
         if (self.match(.comma) == null) {
             break;
@@ -119,7 +115,7 @@ fn parseList(self: *Self) Error![]const Element {
         return Error.ParseError;
     }
 
-    return try elements.toOwnedSlice(self.alloc());
+    return try elements.toOwnedSlice(self.arena);
 }
 
 fn parseBlock(self: *Self) Error!Element {
@@ -148,7 +144,7 @@ fn parseLetBinding(self: *Self) Error!Element {
     _ = try self.matchOrError(.equal);
 
     const content = try self.parseOrError("Expected element after '='");
-    try self.bindings.put(self.alloc(), name_token.lexeme, content);
+    try self.bindings.put(self.arena, name_token.lexeme, content);
 
     return Element {
         .value = .initLetBinding(name_token.lexeme, try self.dupe(content)),
@@ -310,7 +306,7 @@ fn reportError(self: *Self, msg: []const u8, token: Token, target: enum{start, e
 }
 
 fn reportErrorByPosition(self: *Self, msg: []const u8, position: Position) Allocator.Error!void {
-    try self.errors.append(self.alloc(), .{
+    try self.errors.append(self.arena, .{
         .position = position,
         .message = msg,
     });
@@ -381,7 +377,7 @@ fn limit(self: *Self, allowed: []const Token.Kind) Error!void {
 }
 
 fn buildExpectedMsg(self: *Self, allowed: []const Token.Kind, found: ?Token.Kind) Allocator.Error![]const u8 {
-    var msg_writer: std.Io.Writer.Allocating = .init(self.alloc());
+    var msg_writer: std.Io.Writer.Allocating = .init(self.arena);
 
     msg_writer.writer.writeAll("Expected ") catch return Error.OutOfMemory;
     for (allowed[0..allowed.len-1]) |kind| {
@@ -405,18 +401,14 @@ fn sync(self: *Self) Allocator.Error!void {
 }
 
 fn format(self: *Self, comptime fmt: []const u8, args: anytype) Allocator.Error![]const u8 {
-    return std.fmt.allocPrint(self.alloc(), fmt, args);
+    return std.fmt.allocPrint(self.arena, fmt, args);
 }
 
 fn dupe(self: *Self, e: Element) Allocator.Error!*const Element {
-    const ptr = try self.alloc().create(Element);
+    const ptr = try self.arena.create(Element);
     ptr.* = e;
 
     return ptr;
-}
-
-fn alloc(self: *Self) std.mem.Allocator {
-    return self.arena.allocator();
 }
 
 
