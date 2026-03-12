@@ -2,7 +2,7 @@
     .name = .patternscript,
     .version = "0.1.0",
     .fingerprint = 0x39655dd5b3ee94bf,
-    .minimum_zig_version = "0.16.0-dev.2637+6a9510c0e",
+    .minimum_zig_version = "0.16.0-dev.2860+9c5460316",
     .dependencies = .{},
     .paths = .{
         "build.zig",

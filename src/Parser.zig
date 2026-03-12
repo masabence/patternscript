@@ -379,14 +379,14 @@ fn limit(self: *Self, allowed: []const Token.Kind) Error!void {
 fn buildExpectedMsg(self: *Self, allowed: []const Token.Kind, found: ?Token.Kind) Allocator.Error![]const u8 {
     var msg_writer: std.Io.Writer.Allocating = .init(self.arena);
 
-    msg_writer.writer.writeAll("Expected ") catch return Error.OutOfMemory;
+    msg_writer.writer.writeAll("Expected ") catch return error.OutOfMemory;
     for (allowed[0..allowed.len-1]) |kind| {
-        msg_writer.writer.print("{f}, ", .{kind}) catch return Error.OutOfMemory;
+        msg_writer.writer.print("{f}, ", .{kind}) catch return error.OutOfMemory;
     }
-    msg_writer.writer.print("or {f}", .{allowed[allowed.len-1]}) catch return Error.OutOfMemory;
+    msg_writer.writer.print("or {f}", .{allowed[allowed.len-1]}) catch return error.OutOfMemory;
 
     if (found) |f| {
-        msg_writer.writer.print(", found {f}", .{f}) catch return Error.OutOfMemory;
+        msg_writer.writer.print(", found {f}", .{f}) catch return error.OutOfMemory;
     }
 
     return msg_writer.toOwnedSlice();
