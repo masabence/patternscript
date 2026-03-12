@@ -25,7 +25,13 @@ start: Position,
 end: Position,
 
 pub const Value = union(enum) {
-    atom: Atom,
+    any: Atom,
+    digit: Atom,
+    wordchar: Atom,
+    whitespace: Atom,
+    boundary: Atom,
+    start: Atom,
+    end: Atom,
     not: Not,
     string: String,
     pattern: Pattern,
@@ -41,7 +47,13 @@ pub const Value = union(enum) {
 
     pub fn compile(self: Value, writer: *Writer, strict: bool) Writer.Error!void {
         switch (self) {
-            .atom => |atom| try atom.compile(writer),
+            .any => |atom| try atom.compile(writer),
+            .digit => |atom| try atom.compile(writer),
+            .wordchar => |atom| try atom.compile(writer),
+            .whitespace => |atom| try atom.compile(writer),
+            .boundary => |atom| try atom.compile(writer),
+            .start => |atom| try atom.compile(writer),
+            .end => |atom| try atom.compile(writer),
             .not => |not| try not.compile(writer),
             .string => |string| try string.compile(writer, strict),
             .pattern => |pattern| try pattern.compile(writer, strict),
@@ -58,8 +70,8 @@ pub const Value = union(enum) {
         }
     }
 
-    pub fn initAtom(kind: Atom.Kind) Value {
-        return .{ .atom = Atom { .kind = kind } };
+    pub fn initAtom(comptime kind: @EnumLiteral()) Value {
+        return @unionInit(Value, @tagName(kind), Atom { .kind = kind });
     }
 
     pub fn initNot(content: *const Element) Value {

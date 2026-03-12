@@ -164,7 +164,7 @@ fn parseIdentifier(self: *Self) Error!Element {
     return content;
 }
 
-fn parseAtom(self: *Self, kind: Element.Atom.Kind) Element {
+fn parseAtom(self: *Self, comptime kind: @EnumLiteral()) Element {
     const token = self.getCheckedToken();
     return Element {
         .value = .initAtom(kind),
