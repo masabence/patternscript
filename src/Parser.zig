@@ -65,12 +65,12 @@ fn parseSimpleElement(self: *Self) Error!?Element {
     const t = self.scanner.peek() orelse return null;
 
     return switch (t.kind) {
-        .kw_digit => self.parseAtom("\\d"),
-        .kw_wordchar => self.parseAtom("\\w"),
-        .kw_whitespace => self.parseAtom("\\s"),
-        .kw_boundary => self.parseAtom("\\b"),
-        .kw_start => self.parseAtom("^"),
-        .kw_end => self.parseAtom("$"),
+        .kw_digit => self.parseAtom(.digit),
+        .kw_wordchar => self.parseAtom(.wordchar),
+        .kw_whitespace => self.parseAtom(.whitespace),
+        .kw_boundary => self.parseAtom(.boundary),
+        .kw_start => self.parseAtom(.start),
+        .kw_end => self.parseAtom(.end),
 
         .string => self.parseString(Element.Value.initString),
         .pattern => self.parseString(Element.Value.initPattern),
@@ -164,10 +164,10 @@ fn parseIdentifier(self: *Self) Error!Element {
     return content;
 }
 
-fn parseAtom(self: *Self, str: []const u8) Element {
+fn parseAtom(self: *Self, kind: Element.Atom.Kind) Element {
     const token = self.getCheckedToken();
     return Element {
-        .value = .{ .atom = str },
+        .value = .initAtom(kind),
         .start = token.position,
         .end = token.position.addToCol(@as(u32, @intCast(token.len())) - 1),
     };
@@ -246,7 +246,7 @@ fn parseAny(self: *Self) Error!Element {
     }
 
     return Element {
-        .value = .initAtom("."),
+        .value = .initAtom(.any),
         .start = any.position,
         .end = any.position.addToCol(@as(u32, @intCast(any.len())) - 1),
     };

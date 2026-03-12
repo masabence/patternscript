@@ -4,6 +4,7 @@ const Writer = std.Io.Writer;
 const Position = @import("Position.zig");
 const Token = @import("Token.zig");
 
+pub const Atom = @import("elements/Atom.zig");
 pub const Not = @import("elements/Not.zig");
 pub const String = @import("elements/String.zig");
 pub const Pattern = @import("elements/Pattern.zig");
@@ -24,7 +25,7 @@ start: Position,
 end: Position,
 
 pub const Value = union(enum) {
-    atom: []const u8,
+    atom: Atom,
     not: Not,
     string: String,
     pattern: Pattern,
@@ -40,7 +41,7 @@ pub const Value = union(enum) {
 
     pub fn compile(self: Value, writer: *Writer, strict: bool) Writer.Error!void {
         switch (self) {
-            .atom => |str| try writer.writeAll(str),
+            .atom => |atom| try atom.compile(writer),
             .not => |not| try not.compile(writer),
             .string => |string| try string.compile(writer, strict),
             .pattern => |pattern| try pattern.compile(writer, strict),
@@ -57,8 +58,8 @@ pub const Value = union(enum) {
         }
     }
 
-    pub fn initAtom(str: []const u8) Value {
-        return .{ .atom = str };
+    pub fn initAtom(kind: Atom.Kind) Value {
+        return .{ .atom = Atom { .kind = kind } };
     }
 
     pub fn initNot(content: *const Element) Value {
