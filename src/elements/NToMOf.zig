@@ -1,6 +1,6 @@
 const std = @import("std");
 const Writer = std.Io.Writer;
-const Element = @import("../element.zig");
+const Element = @import("../Element.zig");
 
 const Self = @This();
 

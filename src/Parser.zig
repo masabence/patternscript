@@ -1,6 +1,6 @@
 const std = @import("std");
 const Scanner = @import("Scanner.zig");
-const Element = @import("element.zig");
+const Element = @import("Element.zig");
 const Token = @import("Token.zig");
 const ErrorMessage = @import("ErrorMessage.zig");
 const Position = @import("Position.zig");

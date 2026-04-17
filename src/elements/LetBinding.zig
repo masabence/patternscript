@@ -1,4 +1,4 @@
-const Element = @import("../element.zig");
+const Element = @import("../Element.zig");
 
 const Self = @This();
 
