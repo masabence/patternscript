@@ -3,8 +3,8 @@ const patternscript = @import("patternscript");
 const terminal = @import("terminal.zig");
 
 pub fn main(init: std.process.Init) !void {
-    const gpa = init.gpa;
     const io = init.io;
+    const arena = init.arena.allocator();
 
     const args = try init.minimal.args.toSlice(init.arena.allocator());
 
@@ -18,11 +18,11 @@ pub fn main(init: std.process.Init) !void {
 
 
     if (args.len == 1) {
-        try runRepl(gpa, stdin, stdout);
+        try runRepl(arena, stdin, stdout);
     }
 
     if (args.len == 2) {
-        try runFile(io, gpa, args[1], stdout);
+        try runFile(io, arena, args[1], stdout);
     }
 }
 
@@ -45,26 +45,26 @@ fn runFile(io: std.Io, gpa: std.mem.Allocator, file_name: []const u8, stdout: *s
 }
 
 
-fn runRepl(gpa: std.mem.Allocator, stdin: *std.Io.Reader, stdout: *std.Io.Writer) !void {
+fn runRepl(arena: std.mem.Allocator, stdin: *std.Io.Reader, stdout: *std.Io.Writer) !void {
 
-    var output: std.Io.Writer.Allocating = .init(gpa);
-    defer output.deinit();
+    var builder: patternscript.Builder = .init(arena);
 
     while (true) {
         try stdout.writeAll(">>> ");
         try stdout.flush();
 
         const input = try stdin.takeDelimiterInclusive('\n');
-        const line = std.mem.trim(u8, input, "\n\r");
+        const line = std.mem.trim(u8, input, "\r\n");
 
         if (line.len == 0) {
             try terminal.eraseCurrentLine(stdout);
+            try stdout.flush();
             break;
         }
 
-        try patternscript.compile(gpa, line, &output.writer);
+        try builder.add(line);
     }
 
-    try stdout.writeAll(output.written());
+    try builder.compile(stdout);
     try stdout.flush();
 }

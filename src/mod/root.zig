@@ -6,7 +6,7 @@ const Parser = @import("Parser.zig");
 const ErrorMessage = @import("ErrorMessage.zig");
 const Element = @import("Element.zig");
 
-const ErrorMessageList = std.ArrayList(ErrorMessage);
+pub const Builder = @import("Builder.zig");
 
 pub fn compile(gpa: Allocator, source: []const u8, writer: *std.Io.Writer) !void {
 
@@ -14,12 +14,15 @@ pub fn compile(gpa: Allocator, source: []const u8, writer: *std.Io.Writer) !void
     defer arena_allocator.deinit();
     const arena = arena_allocator.allocator();
 
-    var errors: ErrorMessageList = .empty;
+    var errors: std.ArrayList(ErrorMessage) = .empty;
     defer errors.deinit(arena);
 
     var scanner = Scanner.init(source);
+
+    var bindings: std.StringHashMap(Element) = .init(arena);
+    defer bindings.deinit();
     
-    var parser = Parser.init(arena, &scanner, &errors);
+    var parser = Parser.init(arena, &scanner, &errors, &bindings);
 
     const elements = parser.parse() catch {
         for (parser.errors.items) |err| {

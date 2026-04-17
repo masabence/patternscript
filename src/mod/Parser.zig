@@ -5,22 +5,21 @@ const Token = @import("Token.zig");
 const ErrorMessage = @import("ErrorMessage.zig");
 const Position = @import("Position.zig");
 const Allocator = std.mem.Allocator;
-const ErrorMessageList = std.ArrayList(ErrorMessage);
 
 const Self = @This();
 
 
 scanner: *Scanner,
 arena: Allocator,
-errors: *ErrorMessageList,
-bindings: std.StringHashMapUnmanaged(Element),
+errors: *std.ArrayList(ErrorMessage),
+bindings: *std.StringHashMap(Element),
 
-pub fn init(arena: Allocator, scanner: *Scanner, errors: *ErrorMessageList) Self {
+pub fn init(arena: Allocator, scanner: *Scanner, errors: *std.ArrayList(ErrorMessage), bindings: *std.StringHashMap(Element)) Self {
     return .{
         .scanner = scanner,
         .arena = arena,
         .errors = errors,
-        .bindings = .empty,
+        .bindings = bindings,
     };
 }
 
@@ -144,7 +143,7 @@ fn parseLetBinding(self: *Self) Error!Element {
     _ = try self.matchOrError(.equal);
 
     const content = try self.parseOrError("Expected element after '='");
-    try self.bindings.put(self.arena, name_token.lexeme, content);
+    try self.bindings.put(name_token.lexeme, content);
 
     return Element {
         .value = .initLetBinding(name_token.lexeme, try self.dupe(content)),
