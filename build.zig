@@ -7,7 +7,7 @@ pub fn build(b: *std.Build) void {
 
 
     const mod = b.addModule("patternscript", .{
-        .root_source_file = b.path("src/root.zig"),
+        .root_source_file = b.path("src/mod/root.zig"),
         .target = target,
     });
 
@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
     const exe = b.addExecutable(.{
         .name = "patternscript",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
+            .root_source_file = b.path("src/exe/main.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
