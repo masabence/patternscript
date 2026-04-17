@@ -1,5 +1,6 @@
 const std = @import("std");
 const patternscript = @import("patternscript");
+const terminal = @import("terminal.zig");
 
 pub fn main(init: std.process.Init) !void {
     const gpa = init.gpa;
@@ -57,6 +58,7 @@ fn runRepl(gpa: std.mem.Allocator, stdin: *std.Io.Reader, stdout: *std.Io.Writer
         const line = std.mem.trim(u8, input, "\n\r");
 
         if (line.len == 0) {
+            try terminal.eraseCurrentLine(stdout);
             break;
         }
 
