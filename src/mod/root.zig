@@ -8,7 +8,12 @@ const Element = @import("Element.zig");
 
 pub const Builder = @import("Builder.zig");
 
-pub fn compile(gpa: Allocator, source: []const u8, writer: *std.Io.Writer) !void {
+pub fn compile(
+    gpa: Allocator, 
+    source: []const u8, 
+    out: *std.Io.Writer,
+    err: *std.Io.Writer,
+) !void {
 
     var arena_allocator: std.heap.ArenaAllocator = .init(gpa);
     defer arena_allocator.deinit();
@@ -25,8 +30,8 @@ pub fn compile(gpa: Allocator, source: []const u8, writer: *std.Io.Writer) !void
     var parser = Parser.init(arena, &scanner, &errors, &bindings);
 
     const elements = parser.parse() catch {
-        for (parser.errors.items) |err| {
-            err.debug();
+        for (parser.errors.items) |message| {
+            try message.print(err, true);
         }
         return;
     };
@@ -37,6 +42,6 @@ pub fn compile(gpa: Allocator, source: []const u8, writer: *std.Io.Writer) !void
     }
 
     for (elements) |e| {
-        try e.value.compile(writer, false);
+        try e.value.compile(out, false);
     }
 }

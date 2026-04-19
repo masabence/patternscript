@@ -20,7 +20,7 @@ pub fn init(arena: std.mem.Allocator) Builder {
 }
 
 
-pub fn add(self: *Builder, line: []const u8) !void {
+pub fn add(self: *Builder, line: []const u8, stderr: *std.Io.Writer) !void {
     var scanner: Scanner = .init(self.arena, line);
 
     var errors: std.ArrayList(ErrorMessage) = .empty;
@@ -31,7 +31,7 @@ pub fn add(self: *Builder, line: []const u8) !void {
     const result = parser.parse() catch |e| switch (e) {
         error.ParseError => {
             for (parser.errors.items) |message| {
-                message.debug();
+                try message.print(stderr, false);
             }
             return;
         },

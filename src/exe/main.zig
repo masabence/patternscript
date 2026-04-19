@@ -16,17 +16,28 @@ pub fn main(init: std.process.Init) !void {
     var stdout_writer = std.Io.File.stdout().writer(io, &stdout_buffer);
     const stdout = &stdout_writer.interface;
 
+    var stderr_buffer: [64]u8 = undefined;
+    var stderr_writer = std.Io.File.stderr().writer(io, &stderr_buffer);
+    const stderr = &stderr_writer.interface;
+    
+
 
     if (args.len == 1) {
-        try runRepl(arena, stdin, stdout);
+        try runRepl(arena, stdin, stdout, stderr);
     }
 
     if (args.len == 2) {
-        try runFile(io, arena, args[1], stdout);
+        try runFile(io, arena, args[1], stdout, stderr);
     }
 }
 
-fn runFile(io: std.Io, gpa: std.mem.Allocator, file_name: []const u8, stdout: *std.Io.Writer) !void {
+fn runFile(
+    io: std.Io, 
+    gpa: std.mem.Allocator, 
+    file_name: []const u8, 
+    stdout: *std.Io.Writer,
+    stderr: *std.Io.Writer,
+) !void {
     const file = try std.Io.Dir.cwd().openFile(io, file_name, .{ .mode = .read_only });
     defer file.close(io);
 
@@ -38,14 +49,19 @@ fn runFile(io: std.Io, gpa: std.mem.Allocator, file_name: []const u8, stdout: *s
 
     _ = try reader.interface.streamRemaining(&file_content.writer);
 
-    try patternscript.compile(gpa, file_content.written(), stdout);
+    try patternscript.compile(gpa, file_content.written(), stdout, stderr);
     try stdout.writeByte('\n');
 
     try stdout.flush();
 }
 
 
-fn runRepl(arena: std.mem.Allocator, stdin: *std.Io.Reader, stdout: *std.Io.Writer) !void {
+fn runRepl(
+    arena: std.mem.Allocator, 
+    stdin: *std.Io.Reader, 
+    stdout: *std.Io.Writer,
+    stderr: *std.Io.Writer,
+) !void {
 
     var builder: patternscript.Builder = .init(arena);
 
@@ -62,7 +78,8 @@ fn runRepl(arena: std.mem.Allocator, stdin: *std.Io.Reader, stdout: *std.Io.Writ
             break;
         }
 
-        try builder.add(line);
+        try builder.add(line, stderr);
+        try stderr.flush();
     }
 
     try builder.compile(stdout);
