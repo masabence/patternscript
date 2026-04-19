@@ -19,8 +19,7 @@ pub fn init(arena: std.mem.Allocator) Builder {
 
 
 pub fn add(self: *Builder, line: []const u8) !void {
-    const duped_line = try self.bindings.allocator.dupe(u8, line);
-    var scanner: Scanner = .init(duped_line);
+    var scanner: Scanner = .init(self.bindings.allocator, line);
 
     var errors: std.ArrayList(ErrorMessage) = .empty;
 

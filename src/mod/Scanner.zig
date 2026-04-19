@@ -9,6 +9,7 @@ line_start: u32,
 line: u32,
 cache: ?Token,
 consumed: ?Token,
+arena: std.mem.Allocator,
 
 const keywords = std.StaticStringMap(Token.Kind).initComptime(.{
     .{ "any", .kw_any },
@@ -31,7 +32,7 @@ const keywords = std.StaticStringMap(Token.Kind).initComptime(.{
     .{ "let", .kw_let },
 });
 
-pub fn init(source: []const u8) Self {
+pub fn init(arena: std.mem.Allocator, source: []const u8) Self {
     return .{
         .source = source,
         .start = 0,
@@ -40,41 +41,42 @@ pub fn init(source: []const u8) Self {
         .line_start = 0,
         .cache = null,
         .consumed = null,
+        .arena = arena,
     };
 }
 
-pub fn next(self: *Self) ?Token {
+pub fn next(self: *Self) !?Token {
     if (self.cache) |cached| {
         self.cache = null;
         self.consumed = cached;
         return cached;
     }
 
-    self.consumed = self.scanNext();
+    self.consumed = try self.scanNext();
     return self.consumed;
 }
 
-pub fn peek(self: *Self) ?Token {
+pub fn peek(self: *Self) !?Token {
     if (self.cache) |cached| {
         return cached;
     }
 
-    self.cache = self.scanNext();
+    self.cache = try self.scanNext();
     return self.cache;
 }
 
 
-fn scanNext(self: *Self) ?Token {
+fn scanNext(self: *Self) !?Token {
     self.start = self.current;
 
     while (self.consume()) |c| {
 
         if (std.ascii.isAlphabetic(c) or c == '_') {
-            return self.makeIdentifier();
+            return try self.makeIdentifier();
         }
 
         if (std.ascii.isDigit(c)) {
-            return self.makeNumber();
+            return try self.makeNumber();
         }
 
         if (c == '\n') {
@@ -87,15 +89,15 @@ fn scanNext(self: *Self) ?Token {
         }
 
         switch (c) {
-            ',' => return self.makeToken(.comma),
-            '{' => return self.makeToken(.lcurly),
-            '}' => return self.makeToken(.rcurly),
-            '=' => return self.makeToken(.equal),
+            ',' => return try self.makeToken(.comma),
+            '{' => return try self.makeToken(.lcurly),
+            '}' => return try self.makeToken(.rcurly),
+            '=' => return try self.makeToken(.equal),
 
-            '"' => return self.makeStringLiteral('"', .string),
-            '[' => return self.makeStringLiteral(']', .charset),
-            '/' => return self.makeStringLiteral('/', .pattern),
-            '<' => return self.makeStringLiteral('>', .name),
+            '"' => return try self.makeStringLiteral('"', .string),
+            '[' => return try self.makeStringLiteral(']', .charset),
+            '/' => return try self.makeStringLiteral('/', .pattern),
+            '<' => return try self.makeStringLiteral('>', .name),
 
             else => std.debug.panic("Not implemented character: {c}", .{c}),
         }
@@ -106,7 +108,7 @@ fn scanNext(self: *Self) ?Token {
 
 }
 
-fn makeNumber(self: *Self) Token {
+fn makeNumber(self: *Self) !Token {
     while (self.toBeConsumed()) |to_be_consumed| {
 
         if (!std.ascii.isDigit(to_be_consumed)) {
@@ -116,10 +118,10 @@ fn makeNumber(self: *Self) Token {
         _ = self.consume();
     }
 
-    return self.makeToken(.number);
+    return try self.makeToken(.number);
 }
 
-fn makeIdentifier(self: *Self) Token {
+fn makeIdentifier(self: *Self) !Token {
 
     while (self.toBeConsumed()) |to_be_consumed| {
         if (!std.ascii.isAlphanumeric(to_be_consumed)) {
@@ -132,10 +134,10 @@ fn makeIdentifier(self: *Self) Token {
         return self.makeToken(kind);
     }
 
-    return self.makeToken(.identifier);
+    return try self.makeToken(.identifier);
 }
 
-fn makeStringLiteral(self: *Self, comptime end: u8, kind: Token.Kind) Token {
+fn makeStringLiteral(self: *Self, comptime end: u8, kind: Token.Kind) !Token {
     while (self.consume()) |consumed| {
         if (consumed == end) {
             break;
@@ -148,13 +150,13 @@ fn makeStringLiteral(self: *Self, comptime end: u8, kind: Token.Kind) Token {
         }
     }
 
-    return self.makeToken(kind);
+    return try self.makeToken(kind);
 }
 
-fn makeToken(self: *Self, kind: Token.Kind) Token {
+fn makeToken(self: *Self, kind: Token.Kind) !Token {
     return Token {
         .kind = kind,
-        .lexeme = self.currentLexeme(),
+        .lexeme = try self.arena.dupe(u8, self.currentLexeme()),
         .position = .{ 
             .line = self.line, 
             .col = self.start - self.line_start + 1, 

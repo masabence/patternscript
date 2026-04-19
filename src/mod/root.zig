@@ -17,7 +17,7 @@ pub fn compile(gpa: Allocator, source: []const u8, writer: *std.Io.Writer) !void
     var errors: std.ArrayList(ErrorMessage) = .empty;
     defer errors.deinit(arena);
 
-    var scanner = Scanner.init(source);
+    var scanner = Scanner.init(arena, source);
 
     var bindings: std.StringHashMap(Element) = .init(arena);
     defer bindings.deinit();
