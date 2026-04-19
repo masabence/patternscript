@@ -93,6 +93,8 @@ fn scanNext(self: *Self) !?Token {
             '{' => return try self.makeToken(.lcurly),
             '}' => return try self.makeToken(.rcurly),
             '=' => return try self.makeToken(.equal),
+            '-' => return try self.makeToken(.dash),
+            '+' => return try self.makeToken(.plus),
 
             '"' => return try self.makeStringLiteral('"', .string),
             '[' => return try self.makeStringLiteral(']', .charset),
