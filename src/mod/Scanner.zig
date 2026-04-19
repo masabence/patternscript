@@ -78,8 +78,7 @@ fn scanNext(self: *Self) ?Token {
         }
 
         if (c == '\n') {
-            self.line += 1;
-            self.line_start = @intCast(self.current);
+            self.handleNewline();
         }
 
         if (std.ascii.isWhitespace(c)) {
@@ -137,9 +136,15 @@ fn makeIdentifier(self: *Self) Token {
 }
 
 fn makeStringLiteral(self: *Self, comptime end: u8, kind: Token.Kind) Token {
-    while (true) {
-        if (self.consume() orelse break == end) {
+    while (self.consume()) |consumed| {
+        if (consumed == end) {
             break;
+        }
+
+        if (consumed == '\n') {
+            const err = self.makeErrorToken(std.fmt.comptimePrint("Expected closing '{c}'", .{end}));
+            self.handleNewline();
+            return err;
         }
     }
 
@@ -155,6 +160,22 @@ fn makeToken(self: *Self, kind: Token.Kind) Token {
             .col = self.start - self.line_start + 1, 
         },
     };
+}
+
+fn makeErrorToken(self: Self, msg: []const u8) Token {
+    return Token {
+        .kind = .illegal,
+        .lexeme = msg,
+        .position = .{ 
+            .line = self.line, 
+            .col = self.start - self.line_start + 1, 
+        },
+    };
+}
+
+fn handleNewline(self: *Self) void {
+    self.line += 1;
+    self.line_start = self.current;
 }
 
 fn currentLexeme(self: *Self) []const u8 {
