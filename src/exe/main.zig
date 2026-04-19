@@ -66,15 +66,15 @@ fn runRepl(
     var builder: patternscript.Builder = .init(arena);
 
     while (true) {
-        try stdout.writeAll(">>> ");
-        try stdout.flush();
+        try stderr.writeAll(">>> ");
+        try stderr.flush();
 
         const input = try stdin.takeDelimiterInclusive('\n');
         const line = std.mem.trim(u8, input, "\r\n");
 
         if (line.len == 0) {
-            try terminal.eraseCurrentLine(stdout);
-            try stdout.flush();
+            try terminal.eraseCurrentLine(stderr);
+            try stderr.flush();
             break;
         }
 
