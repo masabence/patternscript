@@ -71,54 +71,54 @@ pub const Value = union(enum) {
     }
 
     pub fn initAtom(comptime kind: @EnumLiteral()) Value {
-        return @unionInit(Value, @tagName(kind), Atom { .kind = kind });
+        return @unionInit(Value, @tagName(kind), Atom{ .kind = kind });
     }
 
     pub fn initNot(content: *const Element) Value {
-        return .{ .not = Not { .content = content} };
+        return .{ .not = Not{ .content = content } };
     }
 
     pub fn initString(str: []const u8) Value {
-        return .{ .string = String { .str = str } };
+        return .{ .string = String{ .str = str } };
     }
 
     pub fn initPattern(str: []const u8) Value {
-        return .{ .pattern = Pattern { .str = str } };
+        return .{ .pattern = Pattern{ .str = str } };
     }
 
     pub fn initBlock(contents: []const Element) Value {
-        return .{ .block = Block { .contents = contents} };
+        return .{ .block = Block{ .contents = contents } };
     }
 
     pub fn initNOf(n: []const u8, content: *const Element, plus: bool) Value {
-        return .{ .n_of = NOf { .n = n, .content = content, .plus = plus } };
+        return .{ .n_of = NOf{ .n = n, .content = content, .plus = plus } };
     }
 
     pub fn initNToMOf(n: []const u8, m: []const u8, content: *const Element) Value {
-        return .{ .n_to_m_of = NToMOf { .n = n, .m = m, .content = content } };
+        return .{ .n_to_m_of = NToMOf{ .n = n, .m = m, .content = content } };
     }
 
     pub fn initOptional(content: *const Element) Value {
-        return .{ .optional = Optional { .content = content} };
+        return .{ .optional = Optional{ .content = content } };
     }
 
     pub fn initCapture(name: ?[]const u8, content: *const Element) Value {
-        return .{ .capture = Capture { .name = name, .content = content } };
+        return .{ .capture = Capture{ .name = name, .content = content } };
     }
 
     pub fn initEitherOr(contents: []const Element) Value {
-        return .{ .either_or = EitherOr { .contents = contents } };
+        return .{ .either_or = EitherOr{ .contents = contents } };
     }
 
     pub fn initCharset(content: *const Element, negated: bool) Value {
-        return .{ .charset = Charset { .content = content, .negated = negated } };
+        return .{ .charset = Charset{ .content = content, .negated = negated } };
     }
 
     pub fn initCharsetItem(str: []const u8) Value {
-        return .{ .charset_item = CharsetItem { .str = str } };
+        return .{ .charset_item = CharsetItem{ .str = str } };
     }
 
     pub fn initLetBinding(name: []const u8, content: *const Element) Value {
-        return .{ .let_binding = LetBinding { .name = name, .content = content } };
+        return .{ .let_binding = LetBinding{ .name = name, .content = content } };
     }
 };

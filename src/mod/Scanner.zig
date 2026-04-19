@@ -65,12 +65,10 @@ pub fn peek(self: *Self) !?Token {
     return self.cache;
 }
 
-
 fn scanNext(self: *Self) !?Token {
     self.start = self.current;
 
     while (self.consume()) |c| {
-
         if (std.ascii.isAlphabetic(c) or c == '_') {
             return try self.makeIdentifier();
         }
@@ -103,16 +101,13 @@ fn scanNext(self: *Self) !?Token {
 
             else => std.debug.panic("Not implemented character: {c}", .{c}),
         }
-
     }
 
     return null;
-
 }
 
 fn makeNumber(self: *Self) !Token {
     while (self.toBeConsumed()) |to_be_consumed| {
-
         if (!std.ascii.isDigit(to_be_consumed)) {
             break;
         }
@@ -124,7 +119,6 @@ fn makeNumber(self: *Self) !Token {
 }
 
 fn makeIdentifier(self: *Self) !Token {
-
     while (self.toBeConsumed()) |to_be_consumed| {
         if (!std.ascii.isAlphanumeric(to_be_consumed)) {
             break;
@@ -156,23 +150,23 @@ fn makeStringLiteral(self: *Self, comptime end: u8, kind: Token.Kind) !Token {
 }
 
 fn makeToken(self: *Self, kind: Token.Kind) !Token {
-    return Token {
+    return Token{
         .kind = kind,
         .lexeme = try self.arena.dupe(u8, self.currentLexeme()),
-        .position = .{ 
-            .line = self.line, 
-            .col = self.start - self.line_start + 1, 
+        .position = .{
+            .line = self.line,
+            .col = self.start - self.line_start + 1,
         },
     };
 }
 
 fn makeErrorToken(self: Self, msg: []const u8) Token {
-    return Token {
+    return Token{
         .kind = .illegal,
         .lexeme = msg,
-        .position = .{ 
-            .line = self.line, 
-            .col = self.start - self.line_start + 1, 
+        .position = .{
+            .line = self.line,
+            .col = self.start - self.line_start + 1,
         },
     };
 }
@@ -183,7 +177,7 @@ fn handleNewline(self: *Self) void {
 }
 
 fn currentLexeme(self: *Self) []const u8 {
-    return self.source[self.start .. self.current];
+    return self.source[self.start..self.current];
 }
 
 /// Returns the character at the current index, and advances

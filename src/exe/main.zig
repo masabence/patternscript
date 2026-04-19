@@ -19,8 +19,6 @@ pub fn main(init: std.process.Init) !void {
     var stderr_buffer: [64]u8 = undefined;
     var stderr_writer = std.Io.File.stderr().writer(io, &stderr_buffer);
     const stderr = &stderr_writer.interface;
-    
-
 
     if (args.len == 1) {
         try runRepl(arena, stdin, stdout, stderr);
@@ -32,9 +30,9 @@ pub fn main(init: std.process.Init) !void {
 }
 
 fn runFile(
-    io: std.Io, 
-    gpa: std.mem.Allocator, 
-    file_name: []const u8, 
+    io: std.Io,
+    gpa: std.mem.Allocator,
+    file_name: []const u8,
     stdout: *std.Io.Writer,
     stderr: *std.Io.Writer,
 ) !void {
@@ -55,14 +53,12 @@ fn runFile(
     try stdout.flush();
 }
 
-
 fn runRepl(
-    arena: std.mem.Allocator, 
-    stdin: *std.Io.Reader, 
+    arena: std.mem.Allocator,
+    stdin: *std.Io.Reader,
     stdout: *std.Io.Writer,
     stderr: *std.Io.Writer,
 ) !void {
-
     var builder: patternscript.Builder = .init(arena);
 
     while (true) {

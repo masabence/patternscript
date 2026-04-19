@@ -6,10 +6,7 @@ const Self = @This();
 
 content: *const Element,
 
-
 pub fn compile(self: Self, writer: *Writer) Writer.Error!void {
-
     try self.content.value.compile(writer, true);
     try writer.writeByte('?');
-
 }

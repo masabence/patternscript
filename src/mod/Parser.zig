@@ -8,16 +8,15 @@ const Allocator = std.mem.Allocator;
 
 const Self = @This();
 
-
 scanner: *Scanner,
 arena: Allocator,
 errors: *std.ArrayList(ErrorMessage),
 bindings: *std.StringHashMapUnmanaged(Element),
 
 pub fn init(
-    arena: Allocator, 
-    scanner: *Scanner, 
-    errors: *std.ArrayList(ErrorMessage), 
+    arena: Allocator,
+    scanner: *Scanner,
+    errors: *std.ArrayList(ErrorMessage),
     bindings: *std.StringHashMapUnmanaged(Element),
 ) Self {
     return .{
@@ -38,7 +37,6 @@ pub fn parse(self: *Self) Error![]const Element {
     }
 
     return elements;
-
 }
 
 fn parseElement(self: *Self) Error!?Element {
@@ -58,10 +56,10 @@ fn parseElement(self: *Self) Error!?Element {
 
     const branches = try branches_list.toOwnedSlice(self.arena);
 
-    return Element {
+    return Element{
         .value = .initEitherOr(branches),
         .start = lhs.start,
-        .end = branches[branches.len-1].end,
+        .end = branches[branches.len - 1].end,
     };
 }
 
@@ -128,12 +126,11 @@ fn parseBlock(self: *Self) Error!Element {
 
     const closing = try self.matchOrError(.rcurly);
 
-    return Element {
+    return Element{
         .value = .initBlock(contents),
         .start = opening.position,
         .end = closing.position,
     };
-
 }
 
 fn parseLetBinding(self: *Self) Error!Element {
@@ -150,7 +147,7 @@ fn parseLetBinding(self: *Self) Error!Element {
     const content = try self.parseOrError("Expected element after '='");
     try self.bindings.put(self.arena, name_token.lexeme, content);
 
-    return Element {
+    return Element{
         .value = .initLetBinding(name_token.lexeme, try self.dupe(content)),
         .start = let.position,
         .end = content.end,
@@ -170,17 +167,17 @@ fn parseIdentifier(self: *Self) Error!Element {
 
 fn parseAtom(self: *Self, comptime kind: @EnumLiteral()) Element {
     const token = self.getCheckedToken();
-    return Element {
+    return Element{
         .value = .initAtom(kind),
         .start = token.position,
         .end = token.position.addToCol(@as(u32, @intCast(token.len())) - 1),
     };
 }
 
-fn parseString(self: *Self, factory: fn([]const u8) Element.Value) Element {
+fn parseString(self: *Self, factory: fn ([]const u8) Element.Value) Element {
     const token = self.getCheckedToken();
 
-    return Element {
+    return Element{
         .value = factory(token.stringValue()),
         .start = token.position,
         .end = token.position.addToCol(@as(u32, @intCast(token.len())) - 1),
@@ -190,11 +187,11 @@ fn parseString(self: *Self, factory: fn([]const u8) Element.Value) Element {
 fn parseQuantifier(self: *Self) Error!Element {
     const n = self.getCheckedToken();
 
-    try self.limit(&.{.kw_of, .plus, .dash});
+    try self.limit(&.{ .kw_of, .plus, .dash });
 
     if (try self.match(.kw_of)) |_| {
         const content = try self.parseOrError("Missing content of quantifier");
-        return Element {
+        return Element{
             .value = .initNOf(n.lexeme, try self.dupe(content), false),
             .start = n.position,
             .end = content.end,
@@ -204,7 +201,7 @@ fn parseQuantifier(self: *Self) Error!Element {
     if (try self.match(.plus)) |_| {
         _ = try self.matchOrError(.kw_of);
         const content = try self.parseOrError("Missing content of quantifier");
-        return Element {
+        return Element{
             .value = .initNOf(n.lexeme, try self.dupe(content), true),
             .start = n.position,
             .end = content.end,
@@ -212,12 +209,11 @@ fn parseQuantifier(self: *Self) Error!Element {
     }
 
     if (try self.match(.dash)) |_| {
-
         const m = try self.matchOrError(.number);
         _ = try self.matchOrError(.kw_of);
         const content = try self.parseOrError("Missing content of quantifier");
 
-        return Element {
+        return Element{
             .value = .initNToMOf(n.lexeme, m.lexeme, try self.dupe(content)),
             .start = n.position,
             .end = content.end,
@@ -231,9 +227,8 @@ fn parseAny(self: *Self) Error!Element {
     const any = self.getCheckedToken();
 
     if (try self.match(.kw_from)) |_| {
-
         const content = try self.parseSimpleOrError("Expected body for character set");
-        return Element {
+        return Element{
             .value = .initCharset(try self.dupe(content), false),
             .start = any.position,
             .end = content.end,
@@ -242,14 +237,14 @@ fn parseAny(self: *Self) Error!Element {
 
     if (try self.match(.kw_except)) |_| {
         const content = try self.parseSimpleOrError("Expected body for character set");
-        return Element {
+        return Element{
             .value = .initCharset(try self.dupe(content), true),
             .start = any.position,
             .end = content.end,
         };
     }
 
-    return Element {
+    return Element{
         .value = .initAtom(.any),
         .start = any.position,
         .end = any.position.addToCol(@as(u32, @intCast(any.len())) - 1),
@@ -260,7 +255,7 @@ fn parseOptional(self: *Self) Error!Element {
     const head = self.getCheckedToken();
     const content = try self.parseOrError("Expected body for 'optional'");
 
-    return Element {
+    return Element{
         .value = .initOptional(try self.dupe(content)),
         .start = head.position,
         .end = content.end,
@@ -272,29 +267,27 @@ fn parseCapture(self: *Self) Error!Element {
     const name = if (try self.match(.name)) |token| token.stringValue() else null;
     const content = try self.parseOrError("Expected body for 'capture'");
 
-    return Element {
+    return Element{
         .value = .initCapture(name, try self.dupe(content)),
         .start = head.position,
         .end = content.end,
     };
-    
 }
 
 fn parseNot(self: *Self) Error!Element {
     const head = self.getCheckedToken();
 
-    try self.limit(&.{.kw_digit, .kw_wordchar, .kw_whitespace, .kw_boundary});
+    try self.limit(&.{ .kw_digit, .kw_wordchar, .kw_whitespace, .kw_boundary });
     const content = self.parseElement() catch unreachable orelse unreachable;
 
-    return Element {
+    return Element{
         .value = .initNot(try self.dupe(content)),
         .start = head.position,
         .end = content.end,
     };
-
 }
 
-fn match(self: Self, kind: Token.Kind) !?Token {    
+fn match(self: Self, kind: Token.Kind) !?Token {
     if (try self.scanner.peek()) |token| {
         if (token.kind == kind) {
             return self.scanner.next();
@@ -304,7 +297,7 @@ fn match(self: Self, kind: Token.Kind) !?Token {
     return null;
 }
 
-fn reportError(self: *Self, msg: []const u8, token: Token, target: enum{start, end}) Allocator.Error!void {
+fn reportError(self: *Self, msg: []const u8, token: Token, target: enum { start, end }) Allocator.Error!void {
     const offset = if (target == .end) @as(u32, @intCast(token.len())) else 0;
     try self.reportErrorByPosition(msg, token.position.addToCol(offset));
 }
@@ -353,16 +346,13 @@ fn matchOrError(self: *Self, kind: Token.Kind) Error!Token {
     else
         try self.format("Expected {f}", .{kind});
 
-
     if (try self.scanner.peek()) |peeked| {
         try self.reportError(msg, peeked, .start);
-    }
-    else {
+    } else {
         try self.reportError(msg, self.scanner.consumed.?, .end);
     }
 
     return Error.ParseError;
-
 }
 
 fn limit(self: *Self, allowed: []const Token.Kind) Error!void {
@@ -372,8 +362,7 @@ fn limit(self: *Self, allowed: []const Token.Kind) Error!void {
             try self.reportError(msg, (try self.scanner.peek()).?, .start);
             return Error.ParseError;
         }
-    }
-    else {
+    } else {
         const msg = try self.buildExpectedMsg(allowed, null);
         try self.reportError(msg, self.scanner.consumed.?, .end);
         return Error.ParseError;
@@ -384,10 +373,10 @@ fn buildExpectedMsg(self: *Self, allowed: []const Token.Kind, found: ?Token.Kind
     var msg_writer: std.Io.Writer.Allocating = .init(self.arena);
 
     msg_writer.writer.writeAll("Expected ") catch return error.OutOfMemory;
-    for (allowed[0..allowed.len-1]) |kind| {
+    for (allowed[0 .. allowed.len - 1]) |kind| {
         msg_writer.writer.print("{f}, ", .{kind}) catch return error.OutOfMemory;
     }
-    msg_writer.writer.print("or {f}", .{allowed[allowed.len-1]}) catch return error.OutOfMemory;
+    msg_writer.writer.print("or {f}", .{allowed[allowed.len - 1]}) catch return error.OutOfMemory;
 
     if (found) |f| {
         msg_writer.writer.print(", found {f}", .{f}) catch return error.OutOfMemory;
@@ -414,6 +403,5 @@ fn dupe(self: *Self, e: Element) Allocator.Error!*const Element {
 
     return ptr;
 }
-
 
 pub const Error = error{ParseError} || Allocator.Error;

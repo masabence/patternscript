@@ -9,12 +9,11 @@ const Element = @import("Element.zig");
 pub const Builder = @import("Builder.zig");
 
 pub fn compile(
-    gpa: Allocator, 
-    source: []const u8, 
+    gpa: Allocator,
+    source: []const u8,
     out: *std.Io.Writer,
     err: *std.Io.Writer,
 ) !void {
-
     var arena_allocator: std.heap.ArenaAllocator = .init(gpa);
     defer arena_allocator.deinit();
     const arena = arena_allocator.allocator();
@@ -26,7 +25,7 @@ pub fn compile(
 
     var bindings: std.StringHashMapUnmanaged(Element) = .empty;
     defer bindings.deinit(arena);
-    
+
     var parser = Parser.init(arena, &scanner, &errors, &bindings);
 
     const elements = parser.parse() catch {
@@ -35,7 +34,6 @@ pub fn compile(
         }
         return;
     };
-
 
     if (parser.errors.items.len != 0) {
         return;

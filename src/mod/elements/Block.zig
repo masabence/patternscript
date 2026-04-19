@@ -6,9 +6,7 @@ const Self = @This();
 
 contents: []const Element,
 
-
 pub fn compile(self: Self, writer: *Writer, strict: bool) Writer.Error!void {
-
     if (self.contents.len == 1) {
         return self.contents[0].value.compile(writer, strict);
     }
@@ -24,5 +22,4 @@ pub fn compile(self: Self, writer: *Writer, strict: bool) Writer.Error!void {
     if (strict) {
         try writer.writeByte(')');
     }
-
 }

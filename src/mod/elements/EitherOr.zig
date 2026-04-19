@@ -6,17 +6,14 @@ const Self = @This();
 
 contents: []const Element,
 
-
 pub fn compile(self: Self, writer: *Writer) Writer.Error!void {
-
     try writer.writeAll("(?:");
 
-    for (0..self.contents.len-1) |i| {
+    for (0..self.contents.len - 1) |i| {
         try self.contents[i].value.compile(writer, false);
         try writer.writeByte('|');
     }
 
-    try self.contents[self.contents.len-1].value.compile(writer, false);
+    try self.contents[self.contents.len - 1].value.compile(writer, false);
     try writer.writeByte(')');
-
 }

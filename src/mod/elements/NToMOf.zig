@@ -8,9 +8,7 @@ n: []const u8,
 m: []const u8,
 content: *const Element,
 
-
 pub fn compile(self: Self, writer: *Writer) Writer.Error!void {
-
     switch (self.content.value) {
         .n_of, .n_to_m_of => {
             try writer.writeAll("(?:");

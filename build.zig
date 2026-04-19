@@ -1,16 +1,13 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-
 
     const mod = b.addModule("patternscript", .{
         .root_source_file = b.path("src/mod/root.zig"),
         .target = target,
     });
-
 
     const exe = b.addExecutable(.{
         .name = "patternscript",
@@ -52,5 +49,4 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_mod_tests.step);
     test_step.dependOn(&run_exe_tests.step);
-
 }

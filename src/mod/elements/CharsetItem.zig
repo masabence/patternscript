@@ -6,8 +6,6 @@ const Self = @This();
 str: []const u8,
 
 pub fn compile(self: Self, writer: *Writer) Writer.Error!void {
-
-
     for (self.str) |c| {
         switch (c) {
             // To revise

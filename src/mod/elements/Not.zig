@@ -6,12 +6,10 @@ const Self = @This();
 
 content: *const Element,
 
-
 pub fn compile(self: Self, writer: *Writer) Writer.Error!void {
-
     const buf_size = 2;
 
-    var buffer = [buf_size]u8 {0, 0};
+    var buffer = [buf_size]u8{ 0, 0 };
     var buffer_writer = std.Io.Writer.fixed(&buffer);
     self.content.value.compile(&buffer_writer, false) catch {
         std.debug.panic("Atom overfilled {} byte buffer", .{buf_size});
@@ -24,5 +22,4 @@ pub fn compile(self: Self, writer: *Writer) Writer.Error!void {
 
         try writer.writeByte(std.ascii.toUpper(c));
     }
-
 }

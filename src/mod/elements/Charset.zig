@@ -7,9 +7,7 @@ const Self = @This();
 content: *const Element,
 negated: bool,
 
-
 pub fn compile(self: Self, writer: *Writer) Writer.Error!void {
-
     try writer.writeByte('[');
     if (self.negated) {
         try writer.writeByte('^');

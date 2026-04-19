@@ -13,5 +13,5 @@ pub fn addToCol(self: Self, n: u32) Self {
 }
 
 pub fn format(self: Self, writer: *std.Io.Writer) std.Io.Writer.Error!void {
-    try writer.print("{}:{}", .{self.line, self.col});
+    try writer.print("{}:{}", .{ self.line, self.col });
 }
