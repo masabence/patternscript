@@ -15,7 +15,7 @@ const keywords = std.StaticStringMap(Token.Kind).initComptime(.{
     .{ "digit", .kw_digit },
     .{ "wordchar", .kw_wordchar },
     .{ "whitespace", .kw_whitespace },
-    .{ "boundary", .kw_boundary} ,
+    .{ "boundary", .kw_boundary },
     .{ "not", .kw_not },
     .{ "of", .kw_of },
     .{ "from", .kw_from },
@@ -50,9 +50,8 @@ pub fn next(self: *Self) ?Token {
         return cached;
     }
 
-    const result = self.scanNext();
-    self.consumed = result;
-    return result;
+    self.consumed = self.scanNext();
+    return self.consumed;
 }
 
 pub fn peek(self: *Self) ?Token {
@@ -68,114 +67,109 @@ pub fn peek(self: *Self) ?Token {
 fn scanNext(self: *Self) ?Token {
     self.start = self.current;
 
-    while (self.advance()) |c| {
+    while (self.consume()) |c| {
+
+        if (std.ascii.isAlphabetic(c) or c == '_') {
+            return self.makeIdentifier();
+        }
+
+        if (std.ascii.isDigit(c)) {
+            return self.makeNumber();
+        }
+
+        if (c == '\n') {
+            self.line += 1;
+            self.line_start = @intCast(self.current);
+        }
+
+        if (std.ascii.isWhitespace(c)) {
+            self.start += 1;
+            continue;
+        }
 
         switch (c) {
-
-            '\n', '\r', '\t', ' ' => {
-                self.start += 1;
-            },
-
-            '=' => return self.makeToken(.equal),
-            '+' => return self.makeToken(.plus),
-            '-' => return self.makeToken(.dash),
             ',' => return self.makeToken(.comma),
             '{' => return self.makeToken(.lcurly),
             '}' => return self.makeToken(.rcurly),
-
-            '0'...'9' => return self.makeNumber(),
-            'a'...'z', 
-            'A'...'Z', '_' => return self.makeIdentifier(),
+            '=' => return self.makeToken(.equal),
 
             '"' => return self.makeStringLiteral('"', .string),
-            '<' => return self.makeStringLiteral('>', .name),
-            '/' => return self.makeStringLiteral('/', .pattern),
             '[' => return self.makeStringLiteral(']', .charset),
-            else => std.debug.panic("Unhandled token character: {c}", .{c}),
+            '/' => return self.makeStringLiteral('/', .pattern),
+            '<' => return self.makeStringLiteral('>', .name),
+
+            else => std.debug.panic("Not implemented character: {c}", .{c}),
         }
 
-    } else return null;
+    }
+
+    return null;
+
 }
 
 fn makeNumber(self: *Self) Token {
-    while (self.advance()) |c| {
-        if (!std.ascii.isDigit(c)) {
-            self.current -= 1;
+    while (self.toBeConsumed()) |to_be_consumed| {
+
+        if (!std.ascii.isDigit(to_be_consumed)) {
             break;
         }
+
+        _ = self.consume();
     }
 
     return self.makeToken(.number);
 }
 
 fn makeIdentifier(self: *Self) Token {
-    while (self.advance()) |c| {
-        if (!std.ascii.isAlphanumeric(c) and c != '_') {
-            self.current -= 1;
+
+    while (self.toBeConsumed()) |to_be_consumed| {
+        if (!std.ascii.isAlphanumeric(to_be_consumed)) {
             break;
         }
+        _ = self.consume();
     }
 
-    const word = self.source[self.start..self.current];
-
-    if (keywords.get(word)) |kw| {
-        return self.makeToken(kw);
+    if (keywords.get(self.currentLexeme())) |kind| {
+        return self.makeToken(kind);
     }
-    
+
     return self.makeToken(.identifier);
 }
 
 fn makeStringLiteral(self: *Self, comptime end: u8, kind: Token.Kind) Token {
-
-    // This is done here to have the error point at the beginning
-    const error_token = self.makeErrorToken("Unfinished literal, expected '" ++ .{ end } ++ "'.");
-
-    while (self.advance()) |c| {
-
-        if (c == end) {
+    while (true) {
+        if (self.consume() orelse break == end) {
             break;
         }
-
-        if (c == '\n') {
-            return error_token;
-        }
-
-    } else {
-        return error_token; // reached eof
     }
 
     return self.makeToken(kind);
 }
 
 fn makeToken(self: *Self, kind: Token.Kind) Token {
-    const col = @as(u32, @intCast(self.start + 1)) - self.line_start;
     return Token {
         .kind = kind,
-        .lexeme = self.source[self.start..self.current],
-        .position = .{ .line = self.line, .col = col, },
+        .lexeme = self.currentLexeme(),
+        .position = .{ .line = self.line, .col = 404, },
     };
 }
 
-fn makeErrorToken(self: Self, comptime msg: []const u8) Token {
-    const col = @as(u32, @intCast(self.start + 1)) - self.line_start;
-    return Token {
-        .kind = .illegal,
-        .lexeme = msg,
-        .position = .{ .line = self.line, .col = col, }
-    };
+fn currentLexeme(self: *Self) []const u8 {
+    return self.source[self.start .. self.current];
 }
 
+/// Returns the character at the current index, and advances
+fn consume(self: *Self) ?u8 {
+    const char = self.toBeConsumed() orelse return null;
+    self.current += 1;
+    return char;
+}
 
-fn advance(self: *Self) ?u8 {
-    if (self.source.len <= self.current) {
+/// Returns the character at the current index
+fn toBeConsumed(self: Self) ?u8 {
+    if (self.current >= self.source.len) {
         return null;
     }
 
-    if (self.source[self.current] == '\n') {
-        self.line_start = @intCast(self.current+1);
-        self.line += 1;
-    }
-
-    self.current += 1;
-    return self.source[self.current-1];
+    return self.source[self.current];
 }
