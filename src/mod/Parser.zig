@@ -12,9 +12,14 @@ const Self = @This();
 scanner: *Scanner,
 arena: Allocator,
 errors: *std.ArrayList(ErrorMessage),
-bindings: *std.StringHashMap(Element),
+bindings: *std.StringHashMapUnmanaged(Element),
 
-pub fn init(arena: Allocator, scanner: *Scanner, errors: *std.ArrayList(ErrorMessage), bindings: *std.StringHashMap(Element)) Self {
+pub fn init(
+    arena: Allocator, 
+    scanner: *Scanner, 
+    errors: *std.ArrayList(ErrorMessage), 
+    bindings: *std.StringHashMapUnmanaged(Element),
+) Self {
     return .{
         .scanner = scanner,
         .arena = arena,
@@ -143,7 +148,7 @@ fn parseLetBinding(self: *Self) Error!Element {
     _ = try self.matchOrError(.equal);
 
     const content = try self.parseOrError("Expected element after '='");
-    try self.bindings.put(name_token.lexeme, content);
+    try self.bindings.put(self.arena, name_token.lexeme, content);
 
     return Element {
         .value = .initLetBinding(name_token.lexeme, try self.dupe(content)),

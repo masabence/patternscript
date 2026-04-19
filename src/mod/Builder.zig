@@ -7,23 +7,27 @@ const ErrorMessage = @import("ErrorMessage.zig");
 
 const Builder = @This();
 
-bindings: std.StringHashMap(Element),
+arena: std.mem.Allocator,
+bindings: std.StringHashMapUnmanaged(Element),
 parsed: std.ArrayList(Element),
 
 pub fn init(arena: std.mem.Allocator) Builder {
     return .{
-        .bindings = .init(arena),
+        .arena = arena,
+        .bindings = .empty,
         .parsed = .empty,
     };
 }
 
 
 pub fn add(self: *Builder, line: []const u8) !void {
-    var scanner: Scanner = .init(self.bindings.allocator, line);
+    var scanner: Scanner = .init(self.arena, line);
 
     var errors: std.ArrayList(ErrorMessage) = .empty;
 
-    var parser: Parser = .init(self.bindings.allocator, &scanner, &errors, &self.bindings);
+
+
+    var parser: Parser = .init(self.arena, &scanner, &errors, &self.bindings);
     const result = parser.parse() catch |e| switch (e) {
         error.ParseError => {
             for (parser.errors.items) |message| {
@@ -36,7 +40,7 @@ pub fn add(self: *Builder, line: []const u8) !void {
 
 
 
-    try self.parsed.appendSlice(self.bindings.allocator, result);
+    try self.parsed.appendSlice(self.arena, result);
 
 }
 
