@@ -3,8 +3,8 @@ const Self = @This();
 const Token = @import("Token.zig");
 
 source: []const u8,
-start: usize,
-current: usize,
+start: u32,
+current: u32,
 line_start: u32,
 line: u32,
 cache: ?Token,
@@ -150,7 +150,10 @@ fn makeToken(self: *Self, kind: Token.Kind) Token {
     return Token {
         .kind = kind,
         .lexeme = self.currentLexeme(),
-        .position = .{ .line = self.line, .col = 404, },
+        .position = .{ 
+            .line = self.line, 
+            .col = self.start - self.line_start + 1, 
+        },
     };
 }
 
