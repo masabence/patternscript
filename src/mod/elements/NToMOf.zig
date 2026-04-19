@@ -11,7 +11,14 @@ content: *const Element,
 
 pub fn compile(self: Self, writer: *Writer) Writer.Error!void {
 
-    try self.content.value.compile(writer, true);
+    switch (self.content.value) {
+        .n_of, .n_to_m_of => {
+            try writer.writeAll("(?:");
+            try self.content.value.compile(writer, false);
+            try writer.writeByte(')');
+        },
+        else => try self.content.value.compile(writer, true),
+    }
 
     try writer.writeByte('{');
     try writer.writeAll(self.n);

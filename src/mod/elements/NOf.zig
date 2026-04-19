@@ -16,7 +16,16 @@ pub fn compile(self: Self, writer: *Writer, strict: bool) Writer.Error!void {
         return;
     }
 
-    try self.content.value.compile(writer, true);
+    switch (self.content.value) {
+        .n_of, .n_to_m_of => {
+            try writer.writeAll("(?:");
+            try self.content.value.compile(writer, false);
+            try writer.writeByte(')');
+        },
+        else => try self.content.value.compile(writer, true),
+    }
+
+
 
     if (self.plus) {
         if (eql(self.n, "1")) {
