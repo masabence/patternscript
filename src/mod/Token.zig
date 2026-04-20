@@ -31,6 +31,7 @@ pub const Kind = enum {
     kw_except,
     kw_or,
     kw_capture,
+    kw_ref,
     kw_optional,
     kw_let,
     kw_start,
@@ -62,6 +63,7 @@ pub const Kind = enum {
             .kw_except => "'except'",
             .kw_or => "'or'",
             .kw_capture => "'capture'",
+            .kw_ref => "'ref'",
             .kw_optional => "'optional'",
             .kw_let => "'let'",
             .kw_start => "'start'",
@@ -75,6 +77,10 @@ pub const Kind = enum {
 
 pub fn len(self: Self) usize {
     return self.lexeme.len;
+}
+
+pub fn end(self: Self) Position {
+    return self.position.addToCol(@as(u32, @intCast(self.len())) - 1);
 }
 
 pub fn stringValue(self: Self) []const u8 {

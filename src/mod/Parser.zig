@@ -11,11 +11,13 @@ const Self = @This();
 pub const State = struct {
     errors: std.ArrayList(ErrorMessage),
     bindings: std.StringHashMapUnmanaged(Element),
+    capture_names: std.ArrayList(?[]const u8),
 
     pub fn init() State {
         return .{
             .errors = .empty,
             .bindings = .empty,
+            .capture_names = .empty,
         };
     }
 
@@ -103,6 +105,7 @@ fn parseSimpleElement(self: *Self) Error!?Element {
         .identifier => try self.parseIdentifier(),
 
         .kw_capture => try self.parseCapture(),
+        .kw_ref => try self.parseRef(),
         .kw_not => try self.parseNot(),
 
         .illegal => {
@@ -192,7 +195,7 @@ fn parseAtom(self: *Self, comptime kind: @EnumLiteral()) Element {
     return Element{
         .value = .initAtom(kind),
         .start = token.position,
-        .end = token.position.addToCol(@as(u32, @intCast(token.len())) - 1),
+        .end = token.end(),
     };
 }
 
@@ -202,7 +205,7 @@ fn parseString(self: *Self, factory: fn ([]const u8) Element.Value) Element {
     return Element{
         .value = factory(token.stringValue()),
         .start = token.position,
-        .end = token.position.addToCol(@as(u32, @intCast(token.len())) - 1),
+        .end = token.end(),
     };
 }
 
@@ -269,7 +272,7 @@ fn parseAny(self: *Self) Error!Element {
     return Element{
         .value = .initAtom(.any),
         .start = any.position,
-        .end = any.position.addToCol(@as(u32, @intCast(any.len())) - 1),
+        .end = any.end(),
     };
 }
 
@@ -289,11 +292,62 @@ fn parseCapture(self: *Self) Error!Element {
     const name = if (try self.match(.name)) |token| token.stringValue() else null;
     const content = try self.parseOrError("Expected body for 'capture'");
 
+    try self.state.capture_names.append(self.arena, name);
+
     return Element{
         .value = .initCapture(name, try self.dupe(content)),
         .start = head.position,
         .end = content.end,
     };
+}
+
+fn parseRef(self: *Self) Error!Element {
+    const head = self.getCheckedToken();
+    try self.limit(&.{ .number, .name });
+
+    if (try self.match(.number)) |number| {
+        const capture_count = self.state.capture_names.items.len;
+        const ref_id = std.fmt.parseInt(usize, number.lexeme, 10) catch unreachable;
+        if (capture_count < ref_id) {
+            try self.reportError("Referenced capture doesn't exist", number, .start);
+            return Error.ParseError;
+        }
+
+        return Element{
+            .value = .initRef(number.lexeme, .id),
+            .start = head.position,
+            .end = number.end(),
+        };
+    }
+
+    if (try self.match(.name)) |name| {
+
+        var found = false;
+        for (self.state.capture_names.items) |capture_name| {
+            if (capture_name == null) {
+                continue;
+            }
+
+            if (std.mem.eql(u8, capture_name.?, name.stringValue())) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            try self.reportError("Referenced capture doesn't exist", name, .start);
+            return Error.ParseError;
+        }
+
+
+        return Element{
+            .value = .initRef(name.stringValue(), .name),
+            .start = head.position,
+            .end = name.end(),
+        };
+    }
+
+    unreachable;
 }
 
 fn parseNot(self: *Self) Error!Element {

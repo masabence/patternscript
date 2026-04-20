@@ -13,6 +13,7 @@ pub const NOf = @import("elements/NOf.zig");
 pub const NToMOf = @import("elements/NToMOf.zig");
 pub const Optional = @import("elements/Optional.zig");
 pub const Capture = @import("elements/Capture.zig");
+pub const Ref = @import("elements/Ref.zig");
 pub const EitherOr = @import("elements/EitherOr.zig");
 pub const Charset = @import("elements/Charset.zig");
 pub const CharsetItem = @import("elements/CharsetItem.zig");
@@ -40,6 +41,7 @@ pub const Value = union(enum) {
     n_to_m_of: NToMOf,
     optional: Optional,
     capture: Capture,
+    ref: Ref,
     either_or: EitherOr,
     charset: Charset,
     charset_item: CharsetItem,
@@ -62,6 +64,7 @@ pub const Value = union(enum) {
             .n_to_m_of => |n_to_m_of| try n_to_m_of.compile(writer),
             .optional => |optional| try optional.compile(writer),
             .capture => |capture| try capture.compile(writer),
+            .ref => |ref| try ref.compile(writer),
             .either_or => |either_or| try either_or.compile(writer),
             .charset => |charset| try charset.compile(writer),
             .charset_item => |charset_item| try charset_item.compile(writer),
@@ -104,6 +107,10 @@ pub const Value = union(enum) {
 
     pub fn initCapture(name: ?[]const u8, content: *const Element) Value {
         return .{ .capture = Capture{ .name = name, .content = content } };
+    }
+
+    pub fn initRef(identifier: []const u8, mode: Ref.Mode) Value {
+        return .{ .ref = Ref{ .identifier = identifier, .mode = mode } };
     }
 
     pub fn initEitherOr(contents: []const Element) Value {

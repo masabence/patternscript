@@ -23,6 +23,7 @@ const keywords = std.StaticStringMap(Token.Kind).initComptime(.{
     .{ "except", .kw_except },
     .{ "or", .kw_or },
     .{ "capture", .kw_capture },
+    .{ "ref", .kw_ref },
     .{ "optional", .kw_optional },
     .{ "start", .kw_start },
     .{ "end", .kw_end },
