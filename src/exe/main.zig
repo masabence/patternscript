@@ -65,10 +65,9 @@ fn runRepl(
         try stderr.writeAll(">>> ");
         try stderr.flush();
 
-        const input = try stdin.takeDelimiterInclusive('\n');
-        const line = std.mem.trim(u8, input, "\r\n");
+        const line = try stdin.takeDelimiterInclusive('\n');
 
-        if (line.len == 0) {
+        if (std.mem.trim(u8, line, "\r\n").len == 0) {
             try terminal.eraseCurrentLine(stderr);
             try stderr.flush();
             break;

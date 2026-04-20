@@ -105,7 +105,15 @@ fn parseSimpleElement(self: *Self) Error!?Element {
         .kw_capture => try self.parseCapture(),
         .kw_not => try self.parseNot(),
 
-        else => return null,
+        .illegal => {
+            try self.reportError(t.lexeme, t, .start);
+            return Error.ParseError;
+        },
+
+        else => {
+            try self.reportError("Invalid token", t, .start);
+            return Error.ParseError;
+        },
     };
 }
 

@@ -29,6 +29,7 @@ pub fn add(self: *Builder, line: []const u8, stderr: *std.Io.Writer, options: Ad
             for (parser.state.errors.items) |message| {
                 try message.print(stderr, options.print_location);
             }
+            self.parser_state.errors.clearRetainingCapacity();
             return;
         },
         else => return e,
