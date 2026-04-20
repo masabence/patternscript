@@ -8,22 +8,36 @@ const Allocator = std.mem.Allocator;
 
 const Self = @This();
 
+pub const State = struct {
+    errors: std.ArrayList(ErrorMessage),
+    bindings: std.StringHashMapUnmanaged(Element),
+
+    pub fn init() State {
+        return .{
+            .errors = .empty,
+            .bindings = .empty,
+        };
+    }
+
+    pub fn deinit(self: *State, gpa: std.mem.Allocator) void {
+        self.errors.deinit(gpa);
+        self.bindings.deinit(gpa);
+    }
+};
+
 scanner: *Scanner,
 arena: Allocator,
-errors: *std.ArrayList(ErrorMessage),
-bindings: *std.StringHashMapUnmanaged(Element),
+state: *State,
 
 pub fn init(
     arena: Allocator,
     scanner: *Scanner,
-    errors: *std.ArrayList(ErrorMessage),
-    bindings: *std.StringHashMapUnmanaged(Element),
+    state: *State,
 ) Self {
     return .{
         .scanner = scanner,
         .arena = arena,
-        .errors = errors,
-        .bindings = bindings,
+        .state = state,
     };
 }
 
@@ -137,7 +151,7 @@ fn parseLetBinding(self: *Self) Error!Element {
     const let = self.getCheckedToken();
     const name_token = try self.matchOrError(.identifier);
 
-    if (self.bindings.contains(name_token.lexeme)) {
+    if (self.state.bindings.contains(name_token.lexeme)) {
         try self.reportError("Identifier already in use", name_token, .start);
         return Error.ParseError;
     }
@@ -145,7 +159,7 @@ fn parseLetBinding(self: *Self) Error!Element {
     _ = try self.matchOrError(.equal);
 
     const content = try self.parseOrError("Expected element after '='");
-    try self.bindings.put(self.arena, name_token.lexeme, content);
+    try self.state.bindings.put(self.arena, name_token.lexeme, content);
 
     return Element{
         .value = .initLetBinding(name_token.lexeme, try self.dupe(content)),
@@ -157,7 +171,7 @@ fn parseLetBinding(self: *Self) Error!Element {
 fn parseIdentifier(self: *Self) Error!Element {
     const identifier = self.getCheckedToken();
 
-    const content = self.bindings.get(identifier.lexeme) orelse {
+    const content = self.state.bindings.get(identifier.lexeme) orelse {
         try self.reportError("Unknown identifier", identifier, .start);
         return Error.ParseError;
     };
@@ -303,7 +317,7 @@ fn reportError(self: *Self, msg: []const u8, token: Token, target: enum { start,
 }
 
 fn reportErrorByPosition(self: *Self, msg: []const u8, position: Position) Allocator.Error!void {
-    try self.errors.append(self.arena, .{
+    try self.state.errors.append(self.arena, .{
         .position = position,
         .message = msg,
     });

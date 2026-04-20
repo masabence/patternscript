@@ -9,30 +9,32 @@ const Builder = @This();
 arena: std.mem.Allocator,
 bindings: std.StringHashMapUnmanaged(Element),
 parsed: std.ArrayList(Element),
+parser_state: Parser.State,
 
 pub fn init(arena: std.mem.Allocator) Builder {
     return .{
         .arena = arena,
         .bindings = .empty,
         .parsed = .empty,
+        .parser_state = .init(),
     };
 }
 
 pub fn add(self: *Builder, line: []const u8, stderr: *std.Io.Writer) !void {
     var scanner: Scanner = .init(self.arena, line);
 
-    var errors: std.ArrayList(ErrorMessage) = .empty;
-
-    var parser: Parser = .init(self.arena, &scanner, &errors, &self.bindings);
+    var parser: Parser = .init(self.arena, &scanner, &self.parser_state);
     const result = parser.parse() catch |e| switch (e) {
         error.ParseError => {
-            for (parser.errors.items) |message| {
+            for (parser.state.errors.items) |message| {
                 try message.print(stderr, false);
             }
             return;
         },
         else => return e,
     };
+
+
 
     try self.parsed.appendSlice(self.arena, result);
 }

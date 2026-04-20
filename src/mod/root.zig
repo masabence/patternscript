@@ -18,24 +18,21 @@ pub fn compile(
     defer arena_allocator.deinit();
     const arena = arena_allocator.allocator();
 
-    var errors: std.ArrayList(ErrorMessage) = .empty;
-    defer errors.deinit(arena);
-
     var scanner = Scanner.init(arena, source);
 
-    var bindings: std.StringHashMapUnmanaged(Element) = .empty;
-    defer bindings.deinit(arena);
+    var state: Parser.State = .init();
+    defer state.deinit(arena);
 
-    var parser = Parser.init(arena, &scanner, &errors, &bindings);
+    var parser = Parser.init(arena, &scanner, &state);
 
     const elements = parser.parse() catch {
-        for (parser.errors.items) |message| {
+        for (parser.state.errors.items) |message| {
             try message.print(err, true);
         }
         return;
     };
 
-    if (parser.errors.items.len != 0) {
+    if (parser.state.errors.items.len != 0) {
         return;
     }
 
