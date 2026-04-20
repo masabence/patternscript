@@ -18,25 +18,7 @@ pub fn compile(
     defer arena_allocator.deinit();
     const arena = arena_allocator.allocator();
 
-    var scanner = Scanner.init(arena, source);
-
-    var state: Parser.State = .init();
-    defer state.deinit(arena);
-
-    var parser = Parser.init(arena, &scanner, &state);
-
-    const elements = parser.parse() catch {
-        for (parser.state.errors.items) |message| {
-            try message.print(err, true);
-        }
-        return;
-    };
-
-    if (parser.state.errors.items.len != 0) {
-        return;
-    }
-
-    for (elements) |e| {
-        try e.value.compile(out, false);
-    }
+    var builder: Builder = .init(arena);
+    try builder.add(source, err, .{ .print_location = true });
+    try builder.compile(out);
 }

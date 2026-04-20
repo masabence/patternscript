@@ -20,14 +20,14 @@ pub fn init(arena: std.mem.Allocator) Builder {
     };
 }
 
-pub fn add(self: *Builder, line: []const u8, stderr: *std.Io.Writer) !void {
+pub fn add(self: *Builder, line: []const u8, stderr: *std.Io.Writer, options: AddOptions) !void {
     var scanner: Scanner = .init(self.arena, line);
 
     var parser: Parser = .init(self.arena, &scanner, &self.parser_state);
     const result = parser.parse() catch |e| switch (e) {
         error.ParseError => {
             for (parser.state.errors.items) |message| {
-                try message.print(stderr, false);
+                try message.print(stderr, options.print_location);
             }
             return;
         },
@@ -44,3 +44,8 @@ pub fn compile(self: *Builder, writer: *std.Io.Writer) !void {
         try element.value.compile(writer, false);
     }
 }
+
+
+pub const AddOptions = struct {
+    print_location: bool = false,
+};

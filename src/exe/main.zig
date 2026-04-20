@@ -74,7 +74,7 @@ fn runRepl(
             break;
         }
 
-        try builder.add(line, stderr);
+        try builder.add(line, stderr, .{});
         try stderr.flush();
     }
 
