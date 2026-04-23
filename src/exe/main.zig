@@ -8,15 +8,15 @@ pub fn main(init: std.process.Init) !void {
 
     const args = try init.minimal.args.toSlice(init.arena.allocator());
 
-    var stdin_buffer: [64]u8 = undefined;
+    var stdin_buffer: [512]u8 = undefined;
     var stdin_reader = std.Io.File.stdin().reader(io, &stdin_buffer);
     const stdin = &stdin_reader.interface;
 
-    var stdout_buffer: [64]u8 = undefined;
+    var stdout_buffer: [128]u8 = undefined;
     var stdout_writer = std.Io.File.stdout().writer(io, &stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    var stderr_buffer: [64]u8 = undefined;
+    var stderr_buffer: [128]u8 = undefined;
     var stderr_writer = std.Io.File.stderr().writer(io, &stderr_buffer);
     const stderr = &stderr_writer.interface;
 
