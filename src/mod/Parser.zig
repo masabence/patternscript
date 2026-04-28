@@ -47,7 +47,7 @@ pub fn init(
 pub fn parse(self: *Self) Error![]const Element {
     const elements = try self.parseList();
 
-    if (try self.scanner.peek() != null) {
+    if (self.scanner.peek() != null) {
         try self.reportError("Expected comma after element", self.scanner.consumed.?, .end);
         return Error.ParseError;
     }
@@ -61,7 +61,7 @@ fn parseElement(self: *Self) Error!?Element {
     const lhs = try self.parseSimpleElement() orelse return null;
     try branches_list.append(self.arena, lhs);
 
-    while (try self.match(.kw_or)) |_| {
+    while (self.match(.kw_or)) |_| {
         const branch = try self.parseSimpleOrError("Expected another branch after 'or'");
         try branches_list.append(self.arena, branch);
     }
@@ -80,7 +80,7 @@ fn parseElement(self: *Self) Error!?Element {
 }
 
 fn parseSimpleElement(self: *Self) Error!?Element {
-    const t = try self.scanner.peek() orelse return null;
+    const t = self.scanner.peek() orelse return null;
 
     return switch (t.kind) {
         .kw_digit => self.parseAtom(.digit),
@@ -133,7 +133,7 @@ fn parseList(self: *Self) Error![]const Element {
 
         try elements.append(self.arena, content);
 
-        if (try self.match(.comma) == null) {
+        if (self.match(.comma) == null) {
             break;
         }
     }
@@ -214,7 +214,7 @@ fn parseQuantifier(self: *Self) Error!Element {
 
     try self.limit(&.{ .kw_of, .plus, .dash });
 
-    if (try self.match(.kw_of)) |_| {
+    if (self.match(.kw_of)) |_| {
         const content = try self.parseOrError("Missing content of quantifier");
         return Element{
             .value = .initNOf(n.lexeme, try self.dupe(content), false),
@@ -223,7 +223,7 @@ fn parseQuantifier(self: *Self) Error!Element {
         };
     }
 
-    if (try self.match(.plus)) |_| {
+    if (self.match(.plus)) |_| {
         _ = try self.matchOrError(.kw_of);
         const content = try self.parseOrError("Missing content of quantifier");
         return Element{
@@ -233,7 +233,7 @@ fn parseQuantifier(self: *Self) Error!Element {
         };
     }
 
-    if (try self.match(.dash)) |_| {
+    if (self.match(.dash)) |_| {
         const m = try self.matchOrError(.number);
         _ = try self.matchOrError(.kw_of);
         const content = try self.parseOrError("Missing content of quantifier");
@@ -251,7 +251,7 @@ fn parseQuantifier(self: *Self) Error!Element {
 fn parseAny(self: *Self) Error!Element {
     const any = self.getCheckedToken();
 
-    if (try self.match(.kw_from)) |_| {
+    if (self.match(.kw_from)) |_| {
         const content = try self.parseSimpleOrError("Expected body for character set");
         return Element{
             .value = .initCharset(try self.dupe(content), false),
@@ -260,7 +260,7 @@ fn parseAny(self: *Self) Error!Element {
         };
     }
 
-    if (try self.match(.kw_except)) |_| {
+    if (self.match(.kw_except)) |_| {
         const content = try self.parseSimpleOrError("Expected body for character set");
         return Element{
             .value = .initCharset(try self.dupe(content), true),
@@ -289,7 +289,7 @@ fn parseOptional(self: *Self) Error!Element {
 
 fn parseCapture(self: *Self) Error!Element {
     const head = self.getCheckedToken();
-    const name = if (try self.match(.name)) |token| token.stringValue() else null;
+    const name = if (self.match(.name)) |token| token.stringValue() else null;
     const content = try self.parseOrError("Expected body for 'capture'");
 
     try self.state.capture_names.append(self.arena, name);
@@ -305,7 +305,7 @@ fn parseRef(self: *Self) Error!Element {
     const head = self.getCheckedToken();
     try self.limit(&.{ .number, .name });
 
-    if (try self.match(.number)) |number| {
+    if (self.match(.number)) |number| {
         const capture_count = self.state.capture_names.items.len;
         const ref_id = std.fmt.parseInt(usize, number.lexeme, 10) catch unreachable;
         if (capture_count < ref_id) {
@@ -320,7 +320,7 @@ fn parseRef(self: *Self) Error!Element {
         };
     }
 
-    if (try self.match(.name)) |name| {
+    if (self.match(.name)) |name| {
 
         var found = false;
         for (self.state.capture_names.items) |capture_name| {
@@ -363,8 +363,8 @@ fn parseNot(self: *Self) Error!Element {
     };
 }
 
-fn match(self: Self, kind: Token.Kind) !?Token {
-    if (try self.scanner.peek()) |token| {
+fn match(self: Self, kind: Token.Kind) ?Token {
+    if (self.scanner.peek()) |token| {
         if (token.kind == kind) {
             return self.scanner.next();
         }
@@ -386,7 +386,7 @@ fn reportErrorByPosition(self: *Self, msg: []const u8, position: Position) Alloc
 }
 
 fn getCheckedToken(self: *Self) Token {
-    return self.scanner.next() catch unreachable orelse unreachable;
+    return self.scanner.next() orelse unreachable;
 }
 
 fn nextOrError(self: *Self, msg: []const u8) error{ParseError}!Token {
@@ -413,16 +413,16 @@ fn parseSimpleOrError(self: *Self, msg: []const u8) Error!Element {
 }
 
 fn matchOrError(self: *Self, kind: Token.Kind) Error!Token {
-    if (try self.match(kind)) |matched| {
+    if (self.match(kind)) |matched| {
         return matched;
     }
 
-    const msg: []const u8 = if (try self.scanner.peek()) |peeked|
+    const msg: []const u8 = if (self.scanner.peek()) |peeked|
         try self.format("Expected {f}, found {f}", .{ kind, peeked.kind })
     else
         try self.format("Expected {f}", .{kind});
 
-    if (try self.scanner.peek()) |peeked| {
+    if (self.scanner.peek()) |peeked| {
         try self.reportError(msg, peeked, .start);
     } else {
         try self.reportError(msg, self.scanner.consumed.?, .end);
@@ -432,10 +432,10 @@ fn matchOrError(self: *Self, kind: Token.Kind) Error!Token {
 }
 
 fn limit(self: *Self, allowed: []const Token.Kind) Error!void {
-    if (try self.scanner.peek()) |peeked| {
+    if (self.scanner.peek()) |peeked| {
         if (!std.mem.containsAtLeast(Token.Kind, allowed, 1, &.{peeked.kind})) {
             const msg = try self.buildExpectedMsg(allowed, peeked.kind);
-            try self.reportError(msg, (try self.scanner.peek()).?, .start);
+            try self.reportError(msg, (self.scanner.peek()).?, .start);
             return Error.ParseError;
         }
     } else {
@@ -462,7 +462,7 @@ fn buildExpectedMsg(self: *Self, allowed: []const Token.Kind, found: ?Token.Kind
 }
 
 fn sync(self: *Self) Allocator.Error!void {
-    while (try self.scanner.next()) |next| {
+    while (self.scanner.next()) |next| {
         if (next.kind == .comma) {
             break;
         }

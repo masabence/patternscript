@@ -43,36 +43,36 @@ pub fn init(arena: std.mem.Allocator, source: []const u8) Self {
     };
 }
 
-pub fn next(self: *Self) !?Token {
+pub fn next(self: *Self) ?Token {
     if (self.cache) |cached| {
         self.cache = null;
         self.consumed = cached;
         return cached;
     }
 
-    self.consumed = try self.scanNext();
+    self.consumed = self.scanNext();
     return self.consumed;
 }
 
-pub fn peek(self: *Self) !?Token {
+pub fn peek(self: *Self) ?Token {
     if (self.cache) |cached| {
         return cached;
     }
 
-    self.cache = try self.scanNext();
+    self.cache = self.scanNext();
     return self.cache;
 }
 
-fn scanNext(self: *Self) !?Token {
+fn scanNext(self: *Self) ?Token {
     self.start = self.current;
 
     while (self.consume()) |c| {
         if (std.ascii.isAlphabetic(c) or c == '_') {
-            return try self.makeIdentifier();
+            return self.makeIdentifier();
         }
 
         if (std.ascii.isDigit(c)) {
-            return try self.makeNumber();
+            return self.makeNumber();
         }
 
         if (c == '\n') {
@@ -85,17 +85,17 @@ fn scanNext(self: *Self) !?Token {
         }
 
         switch (c) {
-            ',' => return try self.makeToken(.comma),
-            '{' => return try self.makeToken(.lcurly),
-            '}' => return try self.makeToken(.rcurly),
-            '=' => return try self.makeToken(.equal),
-            '-' => return try self.makeToken(.dash),
-            '+' => return try self.makeToken(.plus),
+            ',' => return self.makeToken(.comma),
+            '{' => return self.makeToken(.lcurly),
+            '}' => return self.makeToken(.rcurly),
+            '=' => return self.makeToken(.equal),
+            '-' => return self.makeToken(.dash),
+            '+' => return self.makeToken(.plus),
 
-            '"' => return try self.makeStringLiteral('"', .string),
-            '[' => return try self.makeStringLiteral(']', .charset),
-            '/' => return try self.makeStringLiteral('/', .pattern),
-            '<' => return try self.makeStringLiteral('>', .name),
+            '"' => return self.makeStringLiteral('"', .string),
+            '[' => return self.makeStringLiteral(']', .charset),
+            '/' => return self.makeStringLiteral('/', .pattern),
+            '<' => return self.makeStringLiteral('>', .name),
 
             else => std.debug.panic("Not implemented character: {c}", .{c}),
         }
@@ -104,7 +104,7 @@ fn scanNext(self: *Self) !?Token {
     return null;
 }
 
-fn makeNumber(self: *Self) !Token {
+fn makeNumber(self: *Self) Token {
     while (self.toBeConsumed()) |to_be_consumed| {
         if (!std.ascii.isDigit(to_be_consumed)) {
             break;
@@ -113,10 +113,10 @@ fn makeNumber(self: *Self) !Token {
         _ = self.consume();
     }
 
-    return try self.makeToken(.number);
+    return self.makeToken(.number);
 }
 
-fn makeIdentifier(self: *Self) !Token {
+fn makeIdentifier(self: *Self) Token {
     while (self.toBeConsumed()) |to_be_consumed| {
         if (!std.ascii.isAlphanumeric(to_be_consumed)) {
             break;
@@ -128,10 +128,10 @@ fn makeIdentifier(self: *Self) !Token {
         return self.makeToken(kind);
     }
 
-    return try self.makeToken(.identifier);
+    return self.makeToken(.identifier);
 }
 
-fn makeStringLiteral(self: *Self, comptime end: u8, kind: Token.Kind) !Token {
+fn makeStringLiteral(self: *Self, comptime end: u8, kind: Token.Kind) Token {
     while (self.consume()) |consumed| {
         if (consumed == end) {
             break;
@@ -144,13 +144,13 @@ fn makeStringLiteral(self: *Self, comptime end: u8, kind: Token.Kind) !Token {
         }
     }
 
-    return try self.makeToken(kind);
+    return self.makeToken(kind);
 }
 
-fn makeToken(self: *Self, kind: Token.Kind) !Token {
+fn makeToken(self: *Self, kind: Token.Kind) Token {
     return Token{
         .kind = kind,
-        .lexeme = try self.arena.dupe(u8, self.currentLexeme()),
+        .lexeme = self.currentLexeme(),
         .position = .{
             .line = self.line,
             .col = self.start - self.line_start + 1,

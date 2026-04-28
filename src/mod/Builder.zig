@@ -10,6 +10,7 @@ arena: std.mem.Allocator,
 bindings: std.StringHashMapUnmanaged(Element),
 parsed: std.ArrayList(Element),
 parser_state: Parser.State,
+lines: std.ArrayList([]const u8),
 
 pub fn init(arena: std.mem.Allocator) Builder {
     return .{
@@ -17,11 +18,15 @@ pub fn init(arena: std.mem.Allocator) Builder {
         .bindings = .empty,
         .parsed = .empty,
         .parser_state = .init(),
+        .lines = .empty,
     };
 }
 
 pub fn add(self: *Builder, line: []const u8, stderr: *std.Io.Writer, options: AddOptions) !void {
-    var scanner: Scanner = .init(self.arena, line);
+    const duped_line = try self.arena.dupe(u8, line);
+    try self.lines.append(self.arena, duped_line);
+
+    var scanner: Scanner = .init(self.arena, duped_line);
 
     var parser: Parser = .init(self.arena, &scanner, &self.parser_state);
     const result = parser.parse() catch |e| switch (e) {
