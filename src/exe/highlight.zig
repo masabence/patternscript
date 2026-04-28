@@ -16,8 +16,8 @@ pub fn drawLineWithColor(arena: std.mem.Allocator, out: *std.Io.Writer, raw: []c
         written_count += before_token.len;
 
         switch (token.kind) {
-            .number => written_count += try writeTokenInColor(out, token.lexeme, theme.number),
-            .string => written_count += try writeTokenInColor(out, token.lexeme, theme.string),
+            .number => try writeTokenInColor(out, token.lexeme, theme.number, &written_count),
+            .string => try writeTokenInColor(out, token.lexeme, theme.string, &written_count),
             .kw_any,
             .kw_boundary,
             .kw_capture,
@@ -34,7 +34,7 @@ pub fn drawLineWithColor(arena: std.mem.Allocator, out: *std.Io.Writer, raw: []c
             .kw_start,
             .kw_whitespace,
             .kw_wordchar,
-            => written_count += try writeTokenInColor(out, token.lexeme, theme.keyword),
+            => try writeTokenInColor(out, token.lexeme, theme.keyword, &written_count),
 
             else => {},
         }
@@ -43,9 +43,9 @@ pub fn drawLineWithColor(arena: std.mem.Allocator, out: *std.Io.Writer, raw: []c
     try out.writeAll(raw[written_count..]);
 }
 
-fn writeTokenInColor(out: *std.Io.Writer, lexeme: []const u8, color: []const u8) !usize {
+fn writeTokenInColor(out: *std.Io.Writer, lexeme: []const u8, color: []const u8, written: *usize) !void {
     try out.writeAll(color);
     try out.writeAll(lexeme);
     try out.writeAll(color_codes.reset);
-    return lexeme.len;
+    written += lexeme.len;
 }
