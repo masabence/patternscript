@@ -9,7 +9,6 @@ line_start: u32,
 line: u32,
 cache: ?Token,
 consumed: ?Token,
-arena: std.mem.Allocator,
 
 const keywords = std.StaticStringMap(Token.Kind).initComptime(.{
     .{ "any", .kw_any },
@@ -30,7 +29,7 @@ const keywords = std.StaticStringMap(Token.Kind).initComptime(.{
     .{ "let", .kw_let },
 });
 
-pub fn init(arena: std.mem.Allocator, source: []const u8) Self {
+pub fn init(source: []const u8) Self {
     return .{
         .source = source,
         .start = 0,
@@ -39,7 +38,6 @@ pub fn init(arena: std.mem.Allocator, source: []const u8) Self {
         .line_start = 0,
         .cache = null,
         .consumed = null,
-        .arena = arena,
     };
 }
 

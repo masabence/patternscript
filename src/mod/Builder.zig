@@ -26,7 +26,7 @@ pub fn add(self: *Builder, line: []const u8, stderr: *std.Io.Writer, options: Ad
     const duped_line = try self.arena.dupe(u8, line);
     try self.lines.append(self.arena, duped_line);
 
-    var scanner: Scanner = .init(self.arena, duped_line);
+    var scanner: Scanner = .init(duped_line);
 
     var parser: Parser = .init(self.arena, &scanner, &self.parser_state);
     const result = parser.parse() catch |e| switch (e) {
