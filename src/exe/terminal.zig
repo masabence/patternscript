@@ -25,6 +25,6 @@ pub fn eraseLine(out: *std.Io.Writer) !void {
     try out.writeAll("\x1b[2K\r\x1b[1A");
 }
 
-pub fn eraseLineRaw(out: *std.Io.Writer) !void {
+pub fn eraseLineForRedraw(out: *std.Io.Writer) !void {
     try out.writeAll("\x1b[2K\r");
 }

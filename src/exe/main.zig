@@ -1,6 +1,9 @@
 const std = @import("std");
 const patternscript = @import("patternscript");
 const terminal = @import("terminal.zig");
+const color_codes = @import("color_codes.zig");
+
+const Theme = @import("Theme.zig");
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -99,7 +102,7 @@ fn runReplRaw(
 
         var buf: [512]u8 = undefined;
 
-        const line = try getLine(&buf, stdin, stderr);
+        const line = try getLine(arena, &buf, stdin, stderr);
         try stderr.writeByte('\n');
 
         if (std.mem.trim(u8, line, "\r\n").len == 0) {
@@ -116,32 +119,81 @@ fn runReplRaw(
     try stdout.flush();
 }
 
-const delete = 0x7F;
-const backspace = 0x08;
+const global_theme = Theme {
+    .keyword = color_codes.blue,
+    .number = color_codes.cyan,
+    .string = color_codes.yellow
+};
 
-fn getLine(buf: []u8, in: *std.Io.Reader, out: *std.Io.Writer) ![]const u8 {
+fn getLine(arena: std.mem.Allocator, buf: []u8, in: *std.Io.Reader, out: *std.Io.Writer) ![]const u8 {
     var cursor: usize = 0;
     while (true) {
         const c = try in.takeByte();
 
-        if (c == '\r' or c == '\n') {
-            buf[cursor] = '\n';
-            cursor += 1;
-            break;
+        const delete = 0x7F;
+        const backspace = 0x08;
+
+        switch (c) {
+            '\r', '\n' => {
+                buf[cursor] = '\n';
+                cursor += 1;
+                break;
+            },
+            delete, backspace => {
+                cursor -|= 1;
+            },
+            else => {
+                buf[cursor] = c;
+                cursor += 1;
+            }
         }
 
-        if (c == delete or c == backspace) {
-            cursor = @max(1, cursor) - 1;
-        } else {
-            buf[cursor] = c;
-            cursor += 1;
-        }
-
-        try terminal.eraseLineRaw(out);
+        try terminal.eraseLineForRedraw(out);
         try out.writeAll(">>> ");
-        try out.writeAll(buf[0..cursor]);
+        try drawLineWithColor(arena, out, buf[0..cursor], global_theme);
         try out.flush();
     }
 
     return buf[0..cursor];
+}
+
+fn drawLineWithColor(arena: std.mem.Allocator, out: *std.Io.Writer, raw: []const u8, theme: Theme) !void {
+    var scanner: patternscript.Scanner = .init(arena, raw);
+    var written_count: usize = 0;
+
+    while (try scanner.next()) |token| {
+        const token_start_index = token.position.col - 1;
+        const before_token = raw[written_count..token_start_index];
+
+
+        try out.writeAll(before_token);
+        written_count += before_token.len;
+
+        switch (token.kind) {
+            .number => {
+                try out.writeAll(theme.number);
+                try out.writeAll(token.lexeme);
+                written_count += token.lexeme.len;
+                try out.writeAll(color_codes.reset);
+            },
+            .kw_any, .kw_boundary, .kw_capture, .kw_digit,
+            .kw_end, .kw_except, .kw_from, .kw_let, .kw_not,
+            .kw_of, .kw_optional, .kw_or, .kw_ref, .kw_start,
+            .kw_whitespace, .kw_wordchar => {
+                try out.writeAll(theme.keyword);
+                try out.writeAll(token.lexeme);
+                written_count += token.lexeme.len;
+                try out.writeAll(color_codes.reset);
+            },
+            .string => {
+                try out.writeAll(theme.string);
+                try out.writeAll(token.lexeme);
+                written_count += token.lexeme.len;
+                try out.writeAll(color_codes.reset);
+            },
+            else => {},
+        }
+    }
+
+    try out.writeAll(raw[written_count..]);
 }
