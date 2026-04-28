@@ -6,29 +6,46 @@ const ErrorMessage = @import("ErrorMessage.zig");
 
 const Builder = @This();
 
-arena: std.mem.Allocator,
+// Fields allocated with gpa
+gpa: std.mem.Allocator,
 bindings: std.StringHashMapUnmanaged(Element),
-parsed: std.ArrayList(Element),
-parser_state: Parser.State,
 lines: std.ArrayList([]const u8),
 
-pub fn init(arena: std.mem.Allocator) Builder {
+// Fields allocated with parser_arena
+parser_arena: std.heap.ArenaAllocator,
+parser_state: Parser.State,
+parsed: std.ArrayList(Element),
+
+pub fn init(gpa: std.mem.Allocator) Builder {
     return .{
-        .arena = arena,
+        .gpa = gpa,
         .bindings = .empty,
         .parsed = .empty,
         .parser_state = .init(),
         .lines = .empty,
+        .parser_arena = .init(gpa),
     };
 }
 
+pub fn deinit(self: *Builder) void {
+    self.bindings.deinit(self.gpa);
+
+    for (self.lines.items) |line| {
+        self.gpa.free(line);
+    }
+
+    self.lines.deinit(self.gpa);
+
+    self.parser_arena.deinit();
+}
+
 pub fn add(self: *Builder, line: []const u8, stderr: *std.Io.Writer, options: AddOptions) !void {
-    const duped_line = try self.arena.dupe(u8, line);
-    try self.lines.append(self.arena, duped_line);
+    const duped_line = try self.gpa.dupe(u8, line);
+    try self.lines.append(self.gpa, duped_line);
 
     var scanner: Scanner = .init(duped_line);
 
-    var parser: Parser = .init(self.arena, &scanner, &self.parser_state);
+    var parser: Parser = .init(self.parser_arena.allocator(), &scanner, &self.parser_state);
     const result = parser.parse() catch |e| switch (e) {
         error.ParseError => {
             for (parser.state.errors.items) |message| {
@@ -41,9 +58,7 @@ pub fn add(self: *Builder, line: []const u8, stderr: *std.Io.Writer, options: Ad
         else => return e,
     };
 
-
-
-    try self.parsed.appendSlice(self.arena, result);
+    try self.parsed.appendSlice(self.parser_arena.allocator(), result);
 }
 
 pub fn compile(self: *Builder, writer: *std.Io.Writer) !void {

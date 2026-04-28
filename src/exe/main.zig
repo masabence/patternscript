@@ -4,7 +4,7 @@ const terminal = @import("terminal.zig");
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
-    const arena = init.arena.allocator();
+    const gpa = init.gpa;
 
     const args = try init.minimal.args.toSlice(init.arena.allocator());
 
@@ -21,11 +21,11 @@ pub fn main(init: std.process.Init) !void {
     const stderr = &stderr_writer.interface;
 
     if (args.len == 1) {
-        try runRepl(arena, stdin, stdout, stderr);
+        try runRepl(gpa, stdin, stdout, stderr);
     }
 
     if (args.len == 2) {
-        try runFile(io, arena, args[1], stdout, stderr);
+        try runFile(io, gpa, args[1], stdout, stderr);
     }
 }
 
@@ -54,12 +54,13 @@ fn runFile(
 }
 
 fn runRepl(
-    arena: std.mem.Allocator,
+    gpa: std.mem.Allocator,
     stdin: *std.Io.Reader,
     stdout: *std.Io.Writer,
     stderr: *std.Io.Writer,
 ) !void {
-    var builder: patternscript.Builder = .init(arena);
+    var builder: patternscript.Builder = .init(gpa);
+    defer builder.deinit();
 
     while (true) {
         try stderr.writeAll(">>> ");
