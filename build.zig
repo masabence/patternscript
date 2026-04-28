@@ -9,27 +9,18 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
-    var termios = b.addTranslateC(.{
-        .root_source_file = b.path("src/exe/termios.h"),
-        .target = target,
-        .optimize = optimize,
-        .link_libc = true,
-    });
-
     const exe_mod = b.createModule(.{
         .root_source_file = b.path("src/exe/main.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
             .{ .name = "patternscript", .module = mod },
-            .{ .name = "termios", .module = termios.createModule() }
         },
     });
 
     const exe = b.addExecutable(.{
         .name = "patternscript",
         .root_module = exe_mod,
-        .use_llvm = true,
     });
 
     b.installArtifact(exe);

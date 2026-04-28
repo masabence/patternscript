@@ -1,23 +1,24 @@
 const std = @import("std");
-const c = @import("termios");
 
-const termios = c.termios;
+const STDIN = 0;
+const termios = std.os.linux.termios;
 
 pub fn setStdinRawMode() termios {
     var original: termios = undefined;
     var raw: termios = undefined;
 
-    _ = c.tcgetattr(c.STDIN_FILENO, &original);
+    _ = std.os.linux.tcgetattr(STDIN, &original);
     raw = original;
 
-    raw.c_lflag &= ~@as(c_uint, c.ECHO | c.ICANON);
-    _ = c.tcsetattr(c.STDIN_FILENO, c.TCSAFLUSH, &raw);
+    raw.lflag.ECHO = false;
+    raw.lflag.ICANON = false;
+    _ = std.os.linux.tcsetattr(STDIN, .FLUSH, &raw);
 
     return original;
 }
 
 pub fn resetStdinMode(settings: *const termios) void {
-    _ = c.tcsetattr(c.STDIN_FILENO, c.TCSAFLUSH, settings);
+    _ = std.os.linux.tcsetattr(STDIN, .FLUSH, settings);
 }
 
 pub fn eraseLine(out: *std.Io.Writer) !void {
