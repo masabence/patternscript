@@ -12,7 +12,7 @@ const global_theme = Theme {
     .string = color_codes.yellow,
 };
 
-pub fn getLine(arena: std.mem.Allocator, buf: []u8, in: *std.Io.Reader, out: *std.Io.Writer) ![]const u8 {
+pub fn getLine(buf: []u8, in: *std.Io.Reader, out: *std.Io.Writer) ![]const u8 {
     var cursor: usize = 0;
     while (true) {
         const c = try in.takeByte();
@@ -37,18 +37,18 @@ pub fn getLine(arena: std.mem.Allocator, buf: []u8, in: *std.Io.Reader, out: *st
 
         try terminal.eraseLineForRedraw(out);
         try out.writeAll(">>> ");
-        try drawLineWithColor(arena, out, buf[0..cursor], global_theme);
+        try drawLineWithColor(out, buf[0..cursor], global_theme);
         try out.flush();
     }
 
     return buf[0..cursor];
 }
 
-fn drawLineWithColor(arena: std.mem.Allocator, out: *std.Io.Writer, raw: []const u8, theme: Theme) !void {
-    var scanner: patternscript.Scanner = .init(arena, raw);
+fn drawLineWithColor(out: *std.Io.Writer, raw: []const u8, theme: Theme) !void {
+    var scanner: patternscript.Scanner = .init(raw);
     var written_count: usize = 0;
 
-    while (try scanner.next()) |token| {
+    while (scanner.next()) |token| {
         const token_start_index = token.position.col - 1;
         const before_token = raw[written_count..token_start_index];
 

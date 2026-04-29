@@ -25,7 +25,7 @@ pub fn main(init: std.process.Init) !void {
     const stderr = &stderr_writer.interface;
 
     if (args.len == 1) {
-        try runReplRaw(arena, stdin, stdout, stderr);
+        try runReplRaw(gpa, stdin, stdout, stderr);
     }
 
     if (args.len == 2) {
@@ -97,6 +97,7 @@ fn runReplRaw(
     defer terminal.resetStdinMode(&original);
 
     var builder: patternscript.Builder = .init(arena);
+    defer builder.deinit();
 
     while (true) {
         try stderr.writeAll(">>> ");
@@ -104,7 +105,7 @@ fn runReplRaw(
 
         var buf: [512]u8 = undefined;
 
-        const line = try highlight.getLine(arena, &buf, stdin, stderr);
+        const line = try highlight.getLine(&buf, stdin, stderr);
         try stderr.writeByte('\n');
 
         if (std.mem.trim(u8, line, "\r\n").len == 0) {
