@@ -7,6 +7,7 @@ const Theme = @import("Theme.zig");
 
 const global_theme = Theme {
     .keyword = color_codes.blue,
+    .atom = color_codes.green,
     .number = color_codes.ansi_code(193),
     .string = color_codes.yellow,
 };
@@ -59,9 +60,13 @@ fn drawLineWithColor(arena: std.mem.Allocator, out: *std.Io.Writer, raw: []const
             .string => try writeTokenInColor(out, token.lexeme, theme.string, &written_count),
             .kw_any,
             .kw_boundary,
-            .kw_capture,
             .kw_digit,
+            .kw_start,
             .kw_end,
+            .kw_whitespace,
+            .kw_wordchar
+            => try writeTokenInColor(out, token.lexeme, theme.atom, &written_count),
+            .kw_capture,
             .kw_except,
             .kw_from,
             .kw_let,
@@ -70,9 +75,6 @@ fn drawLineWithColor(arena: std.mem.Allocator, out: *std.Io.Writer, raw: []const
             .kw_optional,
             .kw_or,
             .kw_ref,
-            .kw_start,
-            .kw_whitespace,
-            .kw_wordchar,
             => try writeTokenInColor(out, token.lexeme, theme.keyword, &written_count),
 
             else => {},
