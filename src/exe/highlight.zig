@@ -47,5 +47,5 @@ fn writeTokenInColor(out: *std.Io.Writer, lexeme: []const u8, color: []const u8,
     try out.writeAll(color);
     try out.writeAll(lexeme);
     try out.writeAll(color_codes.reset);
-    written += lexeme.len;
+    written.* += lexeme.len;
 }
