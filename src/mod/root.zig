@@ -1,11 +1,10 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-const Scanner = @import("Scanner.zig");
-const Parser = @import("Parser.zig");
-const ErrorMessage = @import("ErrorMessage.zig");
-const Element = @import("Element.zig");
-
+pub const Scanner = @import("Scanner.zig");
+pub const Parser = @import("Parser.zig");
+pub const ErrorMessage = @import("ErrorMessage.zig");
+pub const Element = @import("Element.zig");
 pub const Builder = @import("Builder.zig");
 
 pub fn compile(

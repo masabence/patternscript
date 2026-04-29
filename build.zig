@@ -9,16 +9,18 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
+    const exe_mod = b.createModule(.{
+        .root_source_file = b.path("src/exe/main.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "patternscript", .module = mod },
+        },
+    });
+
     const exe = b.addExecutable(.{
         .name = "patternscript",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/exe/main.zig"),
-            .target = target,
-            .optimize = optimize,
-            .imports = &.{
-                .{ .name = "patternscript", .module = mod },
-            },
-        }),
+        .root_module = exe_mod,
     });
 
     b.installArtifact(exe);
