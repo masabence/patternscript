@@ -30,6 +30,11 @@ pub fn getLine(buf: []u8, in: *std.Io.Reader, out: *std.Io.Writer) ![]const u8 {
                 cursor -|= 1;
             },
             else => {
+
+                if (std.ascii.isControl(c)) {
+                    continue;
+                }
+
                 buf[cursor] = c;
                 cursor += 1;
             }
