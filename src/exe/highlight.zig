@@ -1,10 +1,49 @@
 const std = @import("std");
 const color_codes = @import("color_codes.zig");
+const terminal = @import("terminal.zig");
 const patternscript = @import("patternscript");
 
 const Theme = @import("Theme.zig");
 
-pub fn drawLineWithColor(arena: std.mem.Allocator, out: *std.Io.Writer, raw: []const u8, theme: Theme) !void {
+const global_theme = Theme {
+    .keyword = color_codes.blue,
+    .number = color_codes.ansi_code(193),
+    .string = color_codes.yellow,
+};
+
+pub fn getLine(arena: std.mem.Allocator, buf: []u8, in: *std.Io.Reader, out: *std.Io.Writer) ![]const u8 {
+    var cursor: usize = 0;
+    while (true) {
+        const c = try in.takeByte();
+
+        const delete = 0x7F;
+        const backspace = 0x08;
+
+        switch (c) {
+            '\r', '\n' => {
+                buf[cursor] = '\n';
+                cursor += 1;
+                break;
+            },
+            delete, backspace => {
+                cursor -|= 1;
+            },
+            else => {
+                buf[cursor] = c;
+                cursor += 1;
+            }
+        }
+
+        try terminal.eraseLineForRedraw(out);
+        try out.writeAll(">>> ");
+        try drawLineWithColor(arena, out, buf[0..cursor], global_theme);
+        try out.flush();
+    }
+
+    return buf[0..cursor];
+}
+
+fn drawLineWithColor(arena: std.mem.Allocator, out: *std.Io.Writer, raw: []const u8, theme: Theme) !void {
     var scanner: patternscript.Scanner = .init(arena, raw);
     var written_count: usize = 0;
 

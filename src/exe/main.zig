@@ -103,7 +103,7 @@ fn runReplRaw(
 
         var buf: [512]u8 = undefined;
 
-        const line = try getLine(arena, &buf, stdin, stderr);
+        const line = try highlight.getLine(arena, &buf, stdin, stderr);
         try stderr.writeByte('\n');
 
         if (std.mem.trim(u8, line, "\r\n").len == 0) {
@@ -118,42 +118,4 @@ fn runReplRaw(
 
     try builder.compile(stdout);
     try stdout.flush();
-}
-
-const global_theme = Theme {
-    .keyword = color_codes.blue,
-    .number = color_codes.ansi_code(193),
-    .string = color_codes.yellow,
-};
-
-fn getLine(arena: std.mem.Allocator, buf: []u8, in: *std.Io.Reader, out: *std.Io.Writer) ![]const u8 {
-    var cursor: usize = 0;
-    while (true) {
-        const c = try in.takeByte();
-
-        const delete = 0x7F;
-        const backspace = 0x08;
-
-        switch (c) {
-            '\r', '\n' => {
-                buf[cursor] = '\n';
-                cursor += 1;
-                break;
-            },
-            delete, backspace => {
-                cursor -|= 1;
-            },
-            else => {
-                buf[cursor] = c;
-                cursor += 1;
-            }
-        }
-
-        try terminal.eraseLineForRedraw(out);
-        try out.writeAll(">>> ");
-        try highlight.drawLineWithColor(arena, out, buf[0..cursor], global_theme);
-        try out.flush();
-    }
-
-    return buf[0..cursor];
 }
