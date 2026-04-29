@@ -14,7 +14,7 @@ pub fn compile(self: Self, writer: *Writer, strict: bool) Writer.Error!void {
 
     for (self.str) |c| {
         switch (c) {
-            '.', '?', '/', '\\', '(', ')', '{', '}', '[', ']' => try writer.writeByte('\\'),
+            '.', '?', '/', '\\', '(', ')', '{', '}', '[', ']', '$', '^' => try writer.writeByte('\\'),
             else => {},
         }
 
