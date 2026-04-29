@@ -13,11 +13,8 @@ pub fn compile(
     out: *std.Io.Writer,
     err: *std.Io.Writer,
 ) !void {
-    var arena_allocator: std.heap.ArenaAllocator = .init(gpa);
-    defer arena_allocator.deinit();
-    const arena = arena_allocator.allocator();
-
-    var builder: Builder = .init(arena);
+    var builder: Builder = .init(gpa);
+    defer builder.deinit();
     try builder.add(source, err, .{ .print_location = true });
     try builder.compile(out);
 }
