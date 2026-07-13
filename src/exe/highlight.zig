@@ -13,7 +13,7 @@ const global_theme = Theme {
     .name = Color.sky_blue_3,
     .identifier = Color.white,
     .symbol = Color.white,
-    .illegal = Color.white,
+    .illegal = Color.red,
 };
 
 pub fn getLine(buf: []u8, in: *std.Io.Reader, out: *std.Io.Writer) ![]const u8 {

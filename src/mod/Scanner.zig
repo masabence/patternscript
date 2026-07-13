@@ -95,7 +95,7 @@ fn scanNext(self: *Self) ?Token {
             '/' => return self.makeStringLiteral('/', .pattern),
             '<' => return self.makeStringLiteral('>', .name),
 
-            else => std.debug.panic("Not implemented character: {c}", .{c}),
+            else => return self.makeToken(.illegal),
         }
     }
 

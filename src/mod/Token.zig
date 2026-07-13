@@ -37,6 +37,7 @@ pub const Kind = enum {
     kw_start,
     kw_end,
     illegal,
+    error_msg,
 
     const Class = enum {
         keyword,
@@ -91,7 +92,9 @@ pub const Kind = enum {
             .identifier => .identifier,
             .name => .name,
 
-            .illegal => .illegal,
+            .illegal, 
+            .error_msg => .illegal,
+
         };
     }
 
@@ -126,6 +129,7 @@ pub const Kind = enum {
             .kw_start => "'start'",
             .kw_end => "'end'",
             .illegal => "illegal",
+            .error_msg => "error message",
         };
 
         try writer.writeAll(str);

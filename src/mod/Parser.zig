@@ -108,8 +108,13 @@ fn parseSimpleElement(self: *Self) Error!?Element {
         .kw_ref => try self.parseRef(),
         .kw_not => try self.parseNot(),
 
-        .illegal => {
+        .error_msg => {
             try self.reportError(t.lexeme, t, .start);
+            return Error.ParseError;
+        },
+
+        .illegal => {
+            try self.reportError("Invalid character", t, .start);
             return Error.ParseError;
         },
 
