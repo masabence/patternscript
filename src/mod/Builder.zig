@@ -50,6 +50,7 @@ pub fn add(self: *Builder, line: []const u8, stderr: *std.Io.Writer, options: Ad
         error.ParseError => {
             for (parser.state.errors.items) |message| {
                 try message.print(stderr, options.print_location);
+                try stderr.writeByte('\r');
             }
             try stderr.flush();
             self.parser_state.errors.clearRetainingCapacity();

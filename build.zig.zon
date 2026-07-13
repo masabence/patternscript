@@ -3,7 +3,12 @@
     .version = "0.1.0",
     .fingerprint = 0x39655dd5b3ee94bf,
     .minimum_zig_version = "0.16.0",
-    .dependencies = .{},
+    .dependencies = .{
+        .mibu = .{
+            .url = "git+https://github.com/xyaman/mibu#d909782415ab6516700f7cff683fe60c1bd12e66",
+            .hash = "mibu-0.0.1-dev-Ddr1rr7-AACKnQKIhkGiTjkDAhO7dqj-TPGM5L4Ixv2Z",
+        },
+    },
     .paths = .{
         "build.zig",
         "build.zig.zon",

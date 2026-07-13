@@ -38,6 +38,63 @@ pub const Kind = enum {
     kw_end,
     illegal,
 
+    const Class = enum {
+        keyword,
+        operation,
+        quantifier,
+        string,
+        charset,
+        identifier,
+        name,
+        symbol,
+        illegal,
+    };
+
+    pub fn class(self: Kind) Class {
+        return switch (self) {
+            .kw_let,
+            .kw_any,
+            .kw_digit,
+            .kw_wordchar,
+            .kw_whitespace,
+            .kw_boundary,
+            .kw_start,
+            .kw_end,
+            => .keyword,
+
+            .plus,
+            .dash,
+            .number
+            => .quantifier,
+
+            .string,
+            .pattern
+            => .string,  
+
+            .equal,
+            .comma,
+            .lcurly,
+            .rcurly
+            => .symbol,
+
+            .kw_not,
+            .kw_of,
+            .kw_from,
+            .kw_except,
+            .kw_or,
+            .kw_capture,
+            .kw_ref,
+            .kw_optional,
+            => .operation,
+
+            .charset => .charset,
+            .identifier => .identifier,
+            .name => .name,
+
+            .illegal => .illegal,
+        };
+    }
+
     pub fn format(self: Kind, writer: *std.Io.Writer) std.Io.Writer.Error!void {
         const str = switch (self) {
             .string => "string literal",

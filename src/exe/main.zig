@@ -1,10 +1,9 @@
 const std = @import("std");
 const patternscript = @import("patternscript");
-const terminal = @import("terminal.zig");
-const color_codes = @import("color_codes.zig");
 const highlight = @import("highlight.zig");
-
 const Theme = @import("Theme.zig");
+
+const mibu = @import("mibu");
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -73,7 +72,7 @@ fn runRepl(
         const line = try stdin.takeDelimiterInclusive('\n');
 
         if (std.mem.trim(u8, line, "\r\n").len == 0) {
-            try terminal.eraseLine(stderr);
+            try mibu.clear.entireLine(stderr);
             try stderr.flush();
             break;
         }
@@ -93,8 +92,10 @@ fn runReplRaw(
     stderr: *std.Io.Writer,
 ) !void {
 
-    const original = terminal.setStdinRawMode();
-    defer terminal.resetStdinMode(&original);
+    var raw_term = mibu.term.enableRawMode(std.Io.File.stdin().handle)
+        catch @panic("Unsupported platform");
+    defer raw_term.disableRawMode()
+        catch @panic("Unsupported platform");
 
     var builder: patternscript.Builder = .init(arena);
     defer builder.deinit();
@@ -106,10 +107,12 @@ fn runReplRaw(
         var buf: [512]u8 = undefined;
 
         const line = try highlight.getLine(&buf, stdin, stderr);
-        try stderr.writeByte('\n');
+        try stderr.writeAll("\r\n");
 
         if (std.mem.trim(u8, line, "\r\n").len == 0) {
-            try terminal.eraseLine(stderr);
+            try mibu.clear.entireLine(stderr);
+            try stderr.writeAll("\r");
+            try mibu.cursor.goUp(stderr, 1);
             try stderr.flush();
             break;
         }

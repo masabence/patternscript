@@ -1,15 +1,19 @@
 const std = @import("std");
-const color_codes = @import("color_codes.zig");
-const terminal = @import("terminal.zig");
 const patternscript = @import("patternscript");
-
+const mibu = @import("mibu");
 const Theme = @import("Theme.zig");
+const Color = mibu.color.Color;
 
 const global_theme = Theme {
-    .keyword = color_codes.blue,
-    .atom = color_codes.green,
-    .number = color_codes.ansi_code(193),
-    .string = color_codes.yellow,
+    .keyword = Color.blue,
+    .operation = Color.plum_3,
+    .quantifier = Color.dark_sea_green_2,
+    .string = Color.light_salmon_3b,
+    .charset = Color.cadet_blue,
+    .name = Color.sky_blue_3,
+    .identifier = Color.white,
+    .symbol = Color.white,
+    .illegal = Color.white,
 };
 
 pub fn getLine(buf: []u8, in: *std.Io.Reader, out: *std.Io.Writer) ![]const u8 {
@@ -40,7 +44,8 @@ pub fn getLine(buf: []u8, in: *std.Io.Reader, out: *std.Io.Writer) ![]const u8 {
             }
         }
 
-        try terminal.eraseLineForRedraw(out);
+        try mibu.clear.entireLine(out);
+        try out.writeByte('\r');
         try out.writeAll(">>> ");
         try drawLineWithColor(out, buf[0..cursor], global_theme);
         try out.flush();
@@ -60,38 +65,27 @@ fn drawLineWithColor(out: *std.Io.Writer, raw: []const u8, theme: Theme) !void {
         try out.writeAll(before_token);
         written_count += before_token.len;
 
-        switch (token.kind) {
-            .number => try writeTokenInColor(out, token.lexeme, theme.number, &written_count),
-            .string => try writeTokenInColor(out, token.lexeme, theme.string, &written_count),
-            .kw_any,
-            .kw_boundary,
-            .kw_digit,
-            .kw_start,
-            .kw_end,
-            .kw_whitespace,
-            .kw_wordchar
-            => try writeTokenInColor(out, token.lexeme, theme.atom, &written_count),
-            .kw_capture,
-            .kw_except,
-            .kw_from,
-            .kw_let,
-            .kw_not,
-            .kw_of,
-            .kw_optional,
-            .kw_or,
-            .kw_ref,
-            => try writeTokenInColor(out, token.lexeme, theme.keyword, &written_count),
+        const color = switch (token.kind.class()) {
+            .keyword => theme.keyword,
+            .operation => theme.operation,
+            .quantifier => theme.quantifier,
+            .string => theme.string,
+            .charset => theme.charset,
+            .identifier => theme.identifier,
+            .name => theme.name,
+            .symbol => theme.symbol,
+            .illegal => theme.illegal,
+        };
 
-            else => {},
-        }
+        try writeTokenInColor(out, token.lexeme, color);
+        written_count += token.lexeme.len;
     }
 
     try out.writeAll(raw[written_count..]);
 }
 
-fn writeTokenInColor(out: *std.Io.Writer, lexeme: []const u8, color: []const u8, written: *usize) !void {
-    try out.writeAll(color);
+fn writeTokenInColor(out: *std.Io.Writer, lexeme: []const u8, color: Color) !void {
+    try mibu.color.fg256(out, color);
     try out.writeAll(lexeme);
-    try out.writeAll(color_codes.reset);
-    written.* += lexeme.len;
+    try mibu.color.resetAll(out);
 }
