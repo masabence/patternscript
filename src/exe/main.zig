@@ -2,8 +2,17 @@ const std = @import("std");
 const patternscript = @import("patternscript");
 const highlight = @import("highlight.zig");
 const Theme = @import("Theme.zig");
-
 const mibu = @import("mibu");
+
+const builtin = @import("builtin");
+
+comptime {
+    switch (builtin.os.tag) {
+        .windows, .macos, .linux => {},
+        else => @compileError("Unsupported platform"),
+    }
+}
+
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -92,10 +101,8 @@ fn runReplRaw(
     stderr: *std.Io.Writer,
 ) !void {
 
-    var raw_term = mibu.term.enableRawMode(std.Io.File.stdin().handle)
-        catch @panic("Unsupported platform");
-    defer raw_term.disableRawMode()
-        catch @panic("Unsupported platform");
+    var raw_term = mibu.term.enableRawMode(std.Io.File.stdin().handle) catch unreachable;
+    defer raw_term.disableRawMode() catch unreachable;
 
     var builder: patternscript.Builder = .init(arena);
     defer builder.deinit();
