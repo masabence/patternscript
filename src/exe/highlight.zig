@@ -11,8 +11,6 @@ const global_theme = Theme {
     .string = Color.light_salmon_3b,
     .charset = Color.cadet_blue,
     .name = Color.sky_blue_3,
-    .identifier = Color.white,
-    .symbol = Color.white,
     .illegal = Color.red,
 };
 
@@ -73,19 +71,24 @@ fn drawLineWithColor(out: *std.Io.Writer, raw: []const u8, theme: Theme) !void {
             .charset => theme.charset,
             .identifier => theme.identifier,
             .name => theme.name,
-            .symbol => theme.symbol,
             .illegal => theme.illegal,
+            .symbol => theme.symbol,
         };
 
-        try writeTokenInColor(out, token.lexeme, color);
+            try writeTokenInColor(out, token.lexeme, color);
         written_count += token.lexeme.len;
     }
 
     try out.writeAll(raw[written_count..]);
 }
 
-fn writeTokenInColor(out: *std.Io.Writer, lexeme: []const u8, color: Color) !void {
-    try mibu.color.fg256(out, color);
+fn writeTokenInColor(out: *std.Io.Writer, lexeme: []const u8, color: ?Color) !void {
+    if (color == null) {
+        try out.writeAll(lexeme);
+        return;
+    }
+
+    try mibu.color.fg256(out, color.?);
     try out.writeAll(lexeme);
     try mibu.color.resetAll(out);
 }
